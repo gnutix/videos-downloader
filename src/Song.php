@@ -34,6 +34,14 @@ final class Song
     }
 
     /**
+     * @param string $youtubeId
+     */
+    public function removeYoutubeId(string $youtubeId)
+    {
+        $this->youtubeIds = array_diff($this->youtubeIds, [$youtubeId]);
+    }
+
+    /**
      * @return string
      */
     public function getName(): string

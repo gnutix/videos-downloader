@@ -19,4 +19,4 @@ Run the command :
 
 `bin/app`
 
-The `data` folder should be full of mp3s... ;)
+The `downloads/` folder should be full of mp3s... ;)
