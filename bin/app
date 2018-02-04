@@ -1,0 +1,17 @@
+#!/usr/bin/env php
+<?php
+require __DIR__.'/../vendor/autoload.php';
+
+use App\RepertoireDownloader;
+use Symfony\Component\Console\Application;
+use Symfony\Component\Console\Input\InputInterface;
+use Symfony\Component\Console\Output\OutputInterface;
+
+(new Application('app', '1.0.0'))
+    ->register('app')
+    ->setCode(function(InputInterface $input, OutputInterface $output) {
+        return (new RepertoireDownloader())->run($input, $output);
+    })
+    ->getApplication()
+    ->setDefaultCommand('app', true)
+    ->run();
