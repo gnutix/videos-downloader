@@ -174,7 +174,7 @@ final class RepertoireDownloader extends Command
             ->directories()
             ->in($path)
             ->depth('== 0')
-            ->name($youtubeId)
+            ->name($youtubeId.' *')
             ->hasResults();
 
         if ($downloadedAlready) {
@@ -183,8 +183,6 @@ final class RepertoireDownloader extends Command
             return;
         }
 
-        $path .= DIRECTORY_SEPARATOR.$youtubeId;
-
         $filesystem->mkdir($path);
 
         $dl = new YoutubeDl([
@@ -192,7 +190,7 @@ final class RepertoireDownloader extends Command
             'extract-audio' => true,
             'audio-format' => 'mp3',
             'audio-quality' => 0, // best
-            'output' => '%(title)s (%(uploader)s, %(upload_date)s).%(ext)s',
+            'output' => '%(id)s (%(uploader)s, %(upload_date)s)/%(title)s.%(ext)s',
         ]);
         $dl->setDownloadPath($path);
         $dl->download(static::YOUTUBE_URL_PREFIX.$youtubeId);
