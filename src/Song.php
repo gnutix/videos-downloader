@@ -46,10 +46,10 @@ final class Song
      */
     public function getPath(): string
     {
-        return sprintf(
-            '%s/%s',
-            $this->listName,
-            str_replace([DIRECTORY_SEPARATOR, ' - '], ['', DIRECTORY_SEPARATOR], $this->getName())
-        );
+        // First we remove any slash in the song name to avoid bugs like nested "AC/DC" folders...
+        // Then we replace " - " by a slash, as we like to have a root folder with the artist name (ACDC/Hells Bells)
+        $sanitizedName = str_replace([DIRECTORY_SEPARATOR, ' - '], ['', DIRECTORY_SEPARATOR], $this->getName());
+
+        return $this->listName.DIRECTORY_SEPARATOR.$sanitizedName;
     }
 }

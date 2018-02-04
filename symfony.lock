@@ -1,0 +1,62 @@
+{
+    "guzzlehttp/guzzle": {
+        "version": "6.3.0"
+    },
+    "guzzlehttp/promises": {
+        "version": "v1.3.1"
+    },
+    "guzzlehttp/psr7": {
+        "version": "1.4.2"
+    },
+    "league/oauth1-client": {
+        "version": "1.7.0"
+    },
+    "norkunas/youtube-dl-php": {
+        "version": "v1.0.3"
+    },
+    "psr/http-message": {
+        "version": "1.0.1"
+    },
+    "stevenmaguire/trello-php": {
+        "version": "0.4.1"
+    },
+    "symfony/console": {
+        "version": "3.3",
+        "recipe": {
+            "repo": "github.com/symfony/recipes",
+            "branch": "master",
+            "version": "3.3",
+            "ref": "9f94d3ea453cd8a3b95db7f82592d7344fe3a76a"
+        }
+    },
+    "symfony/filesystem": {
+        "version": "v4.0.4"
+    },
+    "symfony/finder": {
+        "version": "v4.0.4"
+    },
+    "symfony/flex": {
+        "version": "1.0",
+        "recipe": {
+            "repo": "github.com/symfony/recipes",
+            "branch": "master",
+            "version": "1.0",
+            "ref": "cc1afd81841db36fbef982fe56b48ade6716fac4"
+        }
+    },
+    "symfony/options-resolver": {
+        "version": "v4.0.4"
+    },
+    "symfony/polyfill-mbstring": {
+        "version": "v1.7.0"
+    },
+    "symfony/polyfill-php72": {
+        "version": "v1.7.0"
+    },
+    "symfony/process": {
+        "version": "v3.3.16"
+    },
+    "symfony/var-dumper": {
+        "version": "v4.0.4"
+    }
+}
