@@ -2,6 +2,9 @@
 
 namespace App;
 
+use App\YoutubeDl\Exception\ChannelRemovedByUserException;
+use App\YoutubeDl\Exception\CustomYoutubeDlException;
+use App\YoutubeDl\Exception\VideoBlockedByCopyrightException;
 use App\YoutubeDl\Exception\VideoRemovedByUserException;
 use App\YoutubeDl\Exception\VideoUnavailableException;
 use Stevenmaguire\Services\Trello\Client;
@@ -189,10 +192,7 @@ final class RepertoireDownloader extends Command
                     try {
                         $this->downloadSongFromYouTube(static::DOWNLOADS_PATH.$song->getPath(), $youtubeId);
                         break;
-                    } catch (VideoRemovedByUserException $e) {
-                        $this->logError($e, $errors);
-                        break;
-                    } catch (VideoUnavailableException $e) {
+                    } catch (CustomYoutubeDlException $e) {
                         $this->logError($e, $errors);
                         break;
                     } catch (\Exception $e) {
@@ -262,6 +262,16 @@ final class RepertoireDownloader extends Command
             }
             if (preg_match('/this video has been removed by the user/i', $e->getMessage())) {
                 throw new VideoRemovedByUserException('The video '.$youtubeId.' has been removed by its user.', 0, $e);
+            }
+            if (preg_match('/the uploader has closed their YouTube account/i', $e->getMessage())) {
+                throw new ChannelRemovedByUserException(
+                    'The channel previously containing the video '.$youtubeId.' has been removed by its user.', 0, $e
+                );
+            }
+            if (preg_match('/who has blocked it on copyright grounds/i', $e->getMessage())) {
+                throw new VideoBlockedByCopyrightException(
+                    'The video '.$youtubeId.' has been block for copyright infringement.', 0, $e
+                );
             }
 
             throw $e;
