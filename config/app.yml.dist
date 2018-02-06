@@ -1,0 +1,59 @@
+# defines which sources and platforms to crawl during the script execution
+config:
+    sources:
+        - trello
+    platforms:
+        - youtube
+
+sources:
+    trello:
+        class_name: \App\Source\Trello\Trello
+
+        # can be fetched from: https://trello.com/app-key
+        api_key: beb1cf49bfceca0ea4f7dc063fe54f37
+
+        # full URL would be: https://trello.com/b/MkYHGxzY/
+        board_id: MkYHGxzY
+
+        # available variables are: %list_name%, %card_name%
+        destination:
+            path: '%list_name%/%card_name%'
+            replace_pattern_by_directory_separator: ' - '
+
+platforms:
+    youtube:
+        class_name: App\Platform\YouTube\YouTube
+
+        # defines which files to download
+        # the key should match those of "youtube_dl_options" and the value must be the corresponding file extension
+        download_files:
+            audio: mp3
+            video: mp4
+
+        destination:
+            path_root: downloads
+
+            # the values below need to match the "DESTINATION_FORMAT" value above
+            format: &DESTINATION_FORMAT '%(id)s (%(uploader)s, %(upload_date)s)/%(title)s.%(ext)s'
+            regex:
+                options: 'ui' # unicode, case insensitive
+
+                # these two values MUST match the "youtube_dl_options._default.output" configuration key
+                youtube_id: '(?:[\w\-\_]+)'
+                uploader_and_upload_date: ' \((?:.*?), (?:[0-9]{8})\)'
+
+        youtube_dl_options:
+            _default: &DEFAULT_YOUTUBE_DL_OPTION
+                continue: true # resume video download when it failed
+                add-metadata: true
+
+                # available options are: https://github.com/rg3/youtube-dl#output-template
+                output: '%(id)s (%(uploader)s, %(upload_date)s)/%(title)s.%(ext)s'
+            audio:
+                <<: *DEFAULT_YOUTUBE_DL_OPTION
+                extract-audio: true
+                audio-format: mp3
+                audio-quality: 0 # best
+            video:
+                <<: *DEFAULT_YOUTUBE_DL_OPTION
+                format: 'mp4[height <=? 720]' # Download 720p or lower

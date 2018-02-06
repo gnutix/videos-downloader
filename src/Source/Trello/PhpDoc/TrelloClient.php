@@ -1,6 +1,6 @@
 <?php declare(strict_types=1);
 
-namespace App\PhpDoc;
+namespace App\Source\Trello\PhpDoc;
 
 /**
  * @method TrelloList[] getBoardLists(string $boardId)

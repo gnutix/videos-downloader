@@ -1,4 +1,7 @@
-# Repertoire as mp3
+# Videos Downloader
+
+This script allows to fetch videos from a source (ex. extract YouTube URLs from Trello cards' descriptions) and
+download them locally into multiple formats (mp3, mp4).
 
 ## Requirements
 
@@ -13,14 +16,37 @@ sudo chmod a+rx /usr/local/bin/youtube-dl
 
 `composer install`
 
-## Execution
+## Running the application
 
-Run the command :
+Copy the default configuration file :
+
+`cp config/app.yml.dist config/app.yml`
+
+Adapt the values as needed. Then :
 
 `bin/app`
 
-The `downloads/` folder should be full of mp3s... ;)
+Congratulations! The `downloads/` folder should be full of mp3 / mp4 files... ;)
 
-## Check file sizes
+## Checking the downloaded files
 
-`ls -1Rs downloads/ | grep '.mp3' | sed -e "s/^ *//" | grep "^[0-9]" | sort -nr | head -n50`
+Display the number of files by extension :
+
+```
+find downloads/ -name "*.mp3" | wc -l
+find downloads/ -name "*.mp4" | wc -l
+```
+
+Display the sum of all files sizes by extension :
+
+```
+find downloads/ -name "*.mp3" -exec du -b {} \; | awk '{total+=$1}END{print total}' | numfmt --to=iec-i
+find downloads/ -name "*.mp4" -exec du -b {} \; | awk '{total+=$1}END{print total}' | numfmt --to=iec-i
+```
+
+List the 30 most heavy files by extension :
+
+```
+ls -1Rs downloads/ | grep '.mp3' | sed -e "s/^ *//" | grep "^[0-9]" | sort -nr | head -n30
+ls -1Rs downloads/ | grep '.mp4' | sed -e "s/^ *//" | grep "^[0-9]" | sort -nr | head -n30
+```

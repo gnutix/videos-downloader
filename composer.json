@@ -1,15 +1,17 @@
 {
     "autoload": {
         "psr-4": {
-            "App\\": "src/"
+            "App\\": "src/",
+            "App\\YoutubeDl\\": "vendor-patches/YoutubeDl/"
         }
     },
     "require": {
-        "symfony/flex": "^1.0",
         "symfony/process": "3.3.*",
         "symfony/console": "^4.0",
         "symfony/filesystem": "^4.0",
         "symfony/finder": "^4.0",
+        "symfony/yaml": "^4.0",
+        "ramsey/uuid": "^3.7",
         "stevenmaguire/trello-php": "^0.4.1",
         "norkunas/youtube-dl-php": "^1.0"
     },
