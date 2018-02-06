@@ -9,7 +9,6 @@ use App\YoutubeDl\Exception\VideoRemovedByUserException;
 use App\YoutubeDl\Exception\VideoUnavailableException;
 use Stevenmaguire\Services\Trello\Client;
 use Symfony\Component\Console\Command\Command;
-use Symfony\Component\Console\Helper\ProgressBar;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
@@ -20,6 +19,24 @@ use App\YoutubeDl\YoutubeDl;
 final class RepertoireDownloader extends Command
 {
     const DOWNLOADS_PATH = __DIR__.DIRECTORY_SEPARATOR.'..'.DIRECTORY_SEPARATOR.'downloads'.DIRECTORY_SEPARATOR;
+    const DOWNLOAD = [
+        'audio' => 'mp3',
+        'video' => 'mp4',
+    ];
+    const YOUTUBE_DL_CONFIG = [
+        '_default' => [
+            'continue' => true,
+            'output' => '%(id)s (%(uploader)s, %(upload_date)s)/%(title)s.%(ext)s',
+        ],
+        'audio' => [
+            'extract-audio' => true,
+            'audio-format' => 'mp3',
+            'audio-quality' => 0, // best
+        ],
+        'video' => [
+            'format' => 'mp4[height <=? 720]',
+        ],
+    ];
 
     const TRELLO_API_KEY = 'beb1cf49bfceca0ea4f7dc063fe54f37'; // fetched from https://trello.com/app-key
     const TRELLO_REPERTOIRE_BOARD_ID = 'MkYHGxzY'; // full URL is https://trello.com/b/MkYHGxzY/repertoire
@@ -29,8 +46,8 @@ final class RepertoireDownloader extends Command
     const YOUTUBE_URL_REGEX = '#\b((?:https?:)?\/\/)?((?:www|m)\.)?((?:youtube\.com|youtu.be))(\/(?:[\w\-]+\?v=|embed\/|v\/)?)([\w\-]+)(\S+)?#i';
     const YOUTUBE_URL_PREFIX = 'https://www.youtube.com/watch?v=';
     const YOUTUBE_ID_LENGTH = 11;
-    const YOUTUBE_FOLDER_REGEX_SUFFIX = ' \((?:.*), [0-9]{8}\)$';
-    const YOUTUBE_FOLDER_REGEX = '#^(?:[\w\-\_]{'.self::YOUTUBE_ID_LENGTH.'})'.self::YOUTUBE_FOLDER_REGEX_SUFFIX.'#ui';
+    const YOUTUBE_FOLDER_REGEX_SUFFIX = ' \((?:.*), [0-9]{8}\)';
+    const YOUTUBE_FOLDER_REGEX = '#^(?:[\w\-\_]{'.self::YOUTUBE_ID_LENGTH.'})'.self::YOUTUBE_FOLDER_REGEX_SUFFIX.'$#ui';
 
     /** @var InputInterface */
     private $input;
@@ -124,6 +141,7 @@ final class RepertoireDownloader extends Command
                 ->in(static::DOWNLOADS_PATH)
                 ->name(static::YOUTUBE_FOLDER_REGEX);
 
+            $foldersToRemove = [];
             foreach ($folders as $folder) {
                 $youtubeId = substr($folder->getBasename(), 0, static::YOUTUBE_ID_LENGTH);
                 $songId = $youtubeIdsAsKeys[$youtubeId] ?? null;
@@ -134,30 +152,39 @@ final class RepertoireDownloader extends Command
                     // Go through the parent folders as long as they only contain one child
                     $folderToRemove = $folder;
                     $parentFolder = $folder->getPathInfo();
-                    while (1 === ($count = (new Finder())->in($parentFolder->getRealPath())->depth('== 0')->count())) {
+                    while (1 === (new Finder())->directories()->in($parentFolder->getRealPath())->depth('== 0')->count()) {
                         $folderToRemove = $parentFolder;
                         $parentFolder = $parentFolder->getPathInfo();
                     }
 
-                    (new Filesystem())->remove($folderToRemove->getRealPath());
+                    $foldersToRemove[] = $folderToRemove->getRealPath();
 
-                    $this->logError(
-                        new \Exception(sprintf('The folder "%s" has been removed.', $folderToRemove->getRealPath())),
-                        $errors,
-                        'info'
-                    );
-
-                // If the ID is in Trello songs but has been downloaded already, we remove it
+                // If the Youtube ID is in Trello songs, but the files have been downloaded already, we skip it
                 } else if ($songs[$songId]) {
-                    $songs[$songId]->removeYoutubeId($youtubeId);
+                    $needsDownload = false;
+                    foreach (static::DOWNLOAD as $extension) {
+                        if (!(new Finder())->files()->in($folder->getRealPath())->name('*.'.$extension)->hasResults()) {
+                            $needsDownload = true;
+                            break;
+                        }
+                    }
+                    if (!$needsDownload) {
+                        $songs[$songId]->removeYoutubeId($youtubeId);
+                    }
                 }
             }
 
+            // Remove after the loop to avoid weird issues
+            foreach ($foldersToRemove as $folderToRemove) {
+                (new Filesystem())->remove($folderToRemove);
+
+                $this->output->writeln('  * The folder "'.$folderToRemove.'" has been removed.');
+            }
         } catch (\Exception $e) {
             $this->logError($e, $errors);
         }
 
-        $this->displayErrors($errors);
+        $this->displayErrors($errors, 'preparation for song downloads');
 
         // Ensure we don't process songs that have no youtube IDs
         return array_filter($songs, function (Song $song) {
@@ -179,18 +206,22 @@ final class RepertoireDownloader extends Command
         $errors = [];
 
         foreach ($songs as $song) {
-            $this->start('Download the audio(s) for "'.$song->getName().'"...', 1);
-
-            $progressBar = new ProgressBar($this->output, \count($song->getYoutubeIds()));
-            $progressBar->setMessage('Download the audio(s) for "'.$song->getName().'"...');
-            $progressBar->start();
+            $this->start('Download the files for "'.$song->getName().'"...', 1);
 
             foreach ($song->getYoutubeIds() as $youtubeId) {
                 $attempts = 0;
                 $maxAttempts = 5;
                 while (true) {
                     try {
-                        $this->downloadSongFromYouTube(static::DOWNLOADS_PATH.$song->getPath(), $youtubeId);
+                        foreach (static::DOWNLOAD as $type => $extension) {
+                            $this->downloadFromYouTube(
+                                static::DOWNLOADS_PATH.$song->getPath(),
+                                $youtubeId,
+                                $type,
+                                $extension
+                            );
+                        }
+                        $this->output->write(PHP_EOL);
                         break;
                     } catch (CustomYoutubeDlException $e) {
                         $this->logError($e, $errors);
@@ -205,23 +236,23 @@ final class RepertoireDownloader extends Command
                         continue;
                     }
                 }
-
-                $progressBar->advance();
             }
-            $progressBar->finish();
+
             $this->done();
         }
 
-        $this->displayErrors($errors);
+        $this->displayErrors($errors, 'download of YouTube files');
     }
 
     /**
      * @param string $path
      * @param string $youtubeId
+     * @param string $type
+     * @param string $extension
      *
      * @throws \Exception
      */
-    private function downloadSongFromYouTube($path, $youtubeId)
+    private function downloadFromYouTube(string $path, string $youtubeId, string $type, string $extension)
     {
         $filesystem = new Filesystem();
 
@@ -230,27 +261,25 @@ final class RepertoireDownloader extends Command
         }
 
         $downloadedAlready = (new Finder())
-            ->directories()
+            ->files()
             ->in($path)
-            ->depth('== 0')
-            ->name('#^'.$youtubeId.static::YOUTUBE_FOLDER_REGEX_SUFFIX)
+            ->path('#'.$youtubeId.static::YOUTUBE_FOLDER_REGEX_SUFFIX.'#ui')
+            ->name('*.'.$extension)
             ->hasResults();
 
         if ($downloadedAlready) {
-            $this->output->write(' <info>Skipped, exists already.</info>');
+            $this->output->writeln(
+                '  * ['.$youtubeId.']['.$type.'] Skipped, the file has already been downloaded.'
+            );
 
             return;
         }
 
+        $this->output->write('  * ['.$youtubeId.']['.$type.'] Download the file...');
+
         $filesystem->mkdir($path);
 
-        $dl = new YoutubeDl([
-            'continue' => true,
-            'extract-audio' => true,
-            'audio-format' => 'mp3',
-            'audio-quality' => 0, // best
-            'output' => '%(id)s (%(uploader)s, %(upload_date)s)/%(title)s.%(ext)s',
-        ]);
+        $dl = new YoutubeDl(array_merge(static::YOUTUBE_DL_CONFIG['_default'], static::YOUTUBE_DL_CONFIG[$type]));
         $dl->setDownloadPath($path);
 
         try {
@@ -276,6 +305,8 @@ final class RepertoireDownloader extends Command
 
             throw $e;
         }
+
+        $this->done();
     }
 
     /**
@@ -316,14 +347,15 @@ final class RepertoireDownloader extends Command
 
     /**
      * @param array $errors
+     * @param string $process
      * @param string $type
      */
-    private function displayErrors(array $errors, string $type = 'error')
+    private function displayErrors(array $errors, string $process, string $type = 'error')
     {
         $nbErrors = \count($errors);
         if ($nbErrors > 0) {
             $this->output->writeln(
-                PHP_EOL.'<'.$type.'>There were '.$nbErrors.' errors during the download of audio files :</'.$type.'>'
+                PHP_EOL.'<'.$type.'>There were '.$nbErrors.' errors during the '.$process.' :</'.$type.'>'
             );
             (new SymfonyStyle($this->input, $this->output))->listing($errors);
         }

@@ -3,6 +3,7 @@
 namespace App\PhpDoc;
 
 /**
+ * @property string $id
  * @property string $idBoard
  * @property string $idList
  * @property string $name

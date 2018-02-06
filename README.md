@@ -20,3 +20,7 @@ Run the command :
 `bin/app`
 
 The `downloads/` folder should be full of mp3s... ;)
+
+## Check file sizes
+
+`ls -1Rs downloads/ | grep '.mp3' | sed -e "s/^ *//" | grep "^[0-9]" | sort -nr | head -n50`
