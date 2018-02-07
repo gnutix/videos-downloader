@@ -7,12 +7,12 @@ final class Kernel
     /**
      * @return string
      *
-     * @throws \UnexpectedValueException
+     * @throws \RuntimeException
      */
     public static function getProjectRootPath(): string
     {
         if (!($projectRoot = getenv('PROJECT_ROOT'))) {
-            throw new \UnexpectedValueException('The environment variable "PROJECT_ROOT" has not been defined.');
+            throw new \RuntimeException('The environment variable "PROJECT_ROOT" has not been defined.');
         }
 
         return rtrim($projectRoot, DIRECTORY_SEPARATOR);

@@ -13,6 +13,7 @@ final class VideoDownloader extends Command
 {
     /**
      * {@inheritdoc}
+     * @throws \RuntimeException
      * @throws \Symfony\Component\Yaml\Exception\ParseException
      */
     public function execute(InputInterface $input, OutputInterface $output)

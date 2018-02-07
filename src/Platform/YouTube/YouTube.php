@@ -24,17 +24,19 @@ final class YouTube implements Platform
     /** @var array */
     private $options;
 
+    /** @var string */
+    private $destinationPath;
+
     /**
      * {@inheritdoc}
+     * @throws \RuntimeException
      * @throws \Symfony\Component\Filesystem\Exception\IOException
      */
     public function __construct(IOHelper $ioHelper, array $options)
     {
         $this->ioHelper = $ioHelper;
         $this->options = $options;
-
-        // Try to create the downloads root directory... 'cause if it fails, nothing will work.
-        (new Filesystem())->mkdir($this->getDestinationPath());
+        $this->destinationPath = $this->getDestinationPath();
     }
 
     /**
@@ -62,9 +64,7 @@ final class YouTube implements Platform
      */
     public function downloadVideos(array $videoDownloads)
     {
-        $videoDownloads = $this->prepareVideosForDownload($videoDownloads);
-
-        $this->downloadVideosFromYouTube($videoDownloads);
+        $this->downloadVideosFromYouTube($this->prepareVideosForDownload($videoDownloads));
     }
 
     /**
@@ -79,6 +79,7 @@ final class YouTube implements Platform
         /** @var \SplFileInfo[] $completedVideoDownloadsFolders */
         $completedVideoDownloadsFolders = [];
 
+        // Passing the value by reference prevents PHP from creating a copy of the array
         foreach ($videoDownloads as &$videoDownload) {
 
             /** @var \Symfony\Component\Finder\Finder $videoDownloadFolderFinder */
@@ -89,7 +90,7 @@ final class YouTube implements Platform
                     ->in(
                         sprintf(
                             '%s'.DIRECTORY_SEPARATOR.'%s'.DIRECTORY_SEPARATOR.'%s*',
-                            $this->getDestinationPath(),
+                            $this->destinationPath,
                             $videoDownload->getPath(),
                             $videoDownload->getVideoId()
                         )
@@ -99,29 +100,32 @@ final class YouTube implements Platform
                 foreach ($videoDownloadFolderFinder as $videoDownloadFolder) {
                     unset($videoDownloads[(string) $videoDownload->getId()]);
 
-                    // Using a key ensures there's no duplicates
                     $parentFolder = $videoDownloadFolder->getPathInfo();
+
+                    // Using a key ensures there's no duplicates
                     $completedVideoDownloadsFolders[$parentFolder->getRealPath()] = $parentFolder;
                 }
-            } catch (\Exception $e) {
-                // The folder simply does not exist yet
+            } catch (\InvalidArgumentException $e) {
+                // This is not the folder you're looking for. You can go about your business. Move along, move along...
             }
         }
-        unset($videoDownload);
+        unset($videoDownload); // See https://alephnull.uk/call-unset-after-php-foreach-loop-values-passed-by-reference
 
         $this->ioHelper->done();
-
         $this->ioHelper->write(
             sprintf(
                 'Synchronize the <info>%s</info> folder with the videos from the source...',
-                $this->getDestinationPath()
+                $this->destinationPath
             )
         );
 
-        /** @var \Symfony\Component\Finder\Finder $foldersToRemoveFinder */
+        /**
+         * @var \Symfony\Component\Finder\Finder $foldersToRemoveFinder
+         * Here we can skip this inspection as we know the folder exists.
+         *//** @noinspection ExceptionsAnnotatingAndHandlingInspection */
         $foldersToRemoveFinder = (new Finder())
             ->directories()
-            ->in($this->getDestinationPath())
+            ->in($this->destinationPath)
             ->filter(function(\SplFileInfo $folder) use ($completedVideoDownloadsFolders) {
 
                 // Try exact folder matching
@@ -140,7 +144,7 @@ final class YouTube implements Platform
                         }
 
                         // Until we reach the downloads root folder
-                    } while ($path->getRealPath() !== $this->getDestinationPath());
+                    } while ($path->getRealPath() !== $this->destinationPath);
                 }
 
                 return true;
@@ -240,7 +244,7 @@ final class YouTube implements Platform
      */
     private function downloadFromYouTube(VideoDownload $videoDownload)
     {
-        $path = $this->getDestinationPath().DIRECTORY_SEPARATOR.$videoDownload->getPath();
+        $path = $this->destinationPath.DIRECTORY_SEPARATOR.$videoDownload->getPath();
 
         $dl = new YoutubeDl($this->options['youtube_dl_options'][$videoDownload->getType()]);
         $dl->setDownloadPath($path);
@@ -280,13 +284,17 @@ final class YouTube implements Platform
 
     /**
      * @return string
+     * @throws \RuntimeException
+     * @throws \Symfony\Component\Filesystem\Exception\IOException
      */
     private function getDestinationPath(): string
     {
-        return sprintf(
-            '%s'.DIRECTORY_SEPARATOR.'%s',
-            rtrim(Kernel::getProjectRootPath(), DIRECTORY_SEPARATOR),
-            trim($this->options['destination']['path_root'], DIRECTORY_SEPARATOR)
-        );
+        $projectRoot = Kernel::getProjectRootPath();
+        $destinationPath = str_replace('%project_root%', $projectRoot, $this->options['destination']['path_root']);
+
+        // Try to create the downloads root directory... 'cause if it fails, nothing will work.
+        (new Filesystem())->mkdir($destinationPath);
+
+        return rtrim($destinationPath, DIRECTORY_SEPARATOR);
     }
 }

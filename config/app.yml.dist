@@ -31,7 +31,9 @@ platforms:
             video: mp4
 
         destination:
-            path_root: downloads
+
+            # available variables: %project_root%
+            path_root: '%project_root%/downloads'
 
             # the values below need to match the "DESTINATION_FORMAT" value above
             format: &DESTINATION_FORMAT '%(id)s (%(uploader)s, %(upload_date)s)/%(title)s.%(ext)s'
