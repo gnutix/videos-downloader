@@ -1,4 +1,4 @@
-# defines which sources and platforms to crawl during the script execution
+# defines which sources and platforms to use during the script execution
 config:
     sources:
         - trello
@@ -15,10 +15,17 @@ sources:
         # full URL would be: https://trello.com/b/MkYHGxzY/
         board_id: MkYHGxzY
 
-        # available variables are: %list_name%, %card_name%
-        destination:
-            path: '%list_name%/%card_name%'
-            replace_pattern_by_directory_separator: ' - '
+        downloads_paths:
+
+            # defines which (relative) path to save the videos in
+            # will be appended to platforms/*/downloads_paths/root/path
+            videos:
+
+                # available variables: %list_name%, %card_name%
+                path: '%list_name%/%card_name%'
+
+                # defines a pattern to replace by a directory separator in the videos path
+                replace_pattern_by_directory_separator: ' - '
 
 platforms:
     youtube:
@@ -30,27 +37,31 @@ platforms:
             audio: mp3
             video: mp4
 
-        destination:
+        downloads_paths:
 
+            # defines which (absolute) path to save the videos in
             # available variables: %project_root%
-            path_root: '%project_root%/downloads'
+            root:
+                path: '%project_root%/downloads'
 
-            # the values below need to match the "DESTINATION_FORMAT" value above
-            format: &DESTINATION_FORMAT '%(id)s (%(uploader)s, %(upload_date)s)/%(title)s.%(ext)s'
-            regex:
-                options: 'ui' # unicode, case insensitive
+            # defines which (relative) path to save the video files in
+            # will be appended to platforms/*/downloads_paths/root/path and sources/*/downloads_paths/videos/path
+            video_files:
 
-                # these two values MUST match the "youtube_dl_options._default.output" configuration key
-                youtube_id: '(?:[\w\-\_]+)'
-                uploader_and_upload_date: ' \((?:.*?), (?:[0-9]{8})\)'
+                # available variables: see https://github.com/rg3/youtube-dl#output-template
+                youtube_dl_output: &DOWNLOADS_PATH_FORMAT '%(id)s (%(uploader)s, %(upload_date)s)/%(title)s.%(ext)s'
+
+                # available variables: %video_id%, %file_extension%
+                path: '%video_id% (*)' # matches '%(id)s (%(uploader)s, %(upload_date)s)'
+
+                # available variables: %video_id%, %file_extension%
+                filename: '*.%file_extension%' # matches '%(title)s.%(ext)s'
 
         youtube_dl_options:
             _default: &DEFAULT_YOUTUBE_DL_OPTION
                 continue: true # resume video download when it failed
                 add-metadata: true
-
-                # available options are: https://github.com/rg3/youtube-dl#output-template
-                output: '%(id)s (%(uploader)s, %(upload_date)s)/%(title)s.%(ext)s'
+                output: *DOWNLOADS_PATH_FORMAT
             audio:
                 <<: *DEFAULT_YOUTUBE_DL_OPTION
                 extract-audio: true

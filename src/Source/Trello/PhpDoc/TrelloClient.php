@@ -2,10 +2,21 @@
 
 namespace App\Source\Trello\PhpDoc;
 
-/**
- * @method TrelloList[] getBoardLists(string $boardId)
- * @method TrelloCard[] getBoardCards(string $boardId)
- */
 interface TrelloClient
 {
+    /**
+     * @param string $boardId
+     *
+     * @return TrelloList[]
+     * @throws \Stevenmaguire\Services\Trello\Exceptions\Exception
+     */
+    public function getBoardLists(string $boardId): array;
+
+    /**
+     * @param string $boardId
+     *
+     * @return TrelloCard[]
+     * @throws \Stevenmaguire\Services\Trello\Exceptions\Exception
+     */
+    public function getBoardCards(string $boardId): array;
 }

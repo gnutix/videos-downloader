@@ -8,6 +8,7 @@ use App\Platform\Platform;
 use App\Source\Source;
 use Ramsey\Uuid\Uuid;
 use Stevenmaguire\Services\Trello\Client;
+use Stevenmaguire\Services\Trello\Exceptions\Exception;
 
 final class Trello implements Source
 {
@@ -35,10 +36,22 @@ final class Trello implements Source
      */
     public function getVideos(Platform $platform): array
     {
-        $this->ioHelper->write('Fetch the videos from the source (Trello)...');
+        $this->ioHelper->write('Fetch the videos from the source (Trello)... ');
 
-        $trelloLists = $this->client->getBoardLists($this->options['board_id']);
-        $trelloCards = $this->client->getBoardCards($this->options['board_id']);
+        try {
+            $trelloLists = $this->client->getBoardLists($this->options['board_id']);
+            $trelloCards = $this->client->getBoardCards($this->options['board_id']);
+        } catch (Exception $e) {
+            $this->ioHelper->write(
+                sprintf(
+                    '<error>Could not fetch the information from Trello!</error>'.PHP_EOL.PHP_EOL.'    <error>%s</error>'.PHP_EOL,
+                    $e->getMessage()
+                ),
+                true
+            );
+
+            return [];
+        }
 
         // Add the list ID as a key to the array so it's easier to find it
         $lists = array_combine(array_column($trelloLists, 'id'), $trelloLists);
@@ -56,10 +69,16 @@ final class Trello implements Source
              * Then we replace a pattern by a directory separator, to allow having a parent folder with the artist name.
              * Ex: "Songs/ACDC - Hells Bells" => "Songs/ACDC/Hells Bells"
              */
+            $pattern = $this->options['downloads_paths']['videos']['replace_pattern_by_directory_separator'] ?? '';
+            $placeholders = [
+                '%list_name%' => $this->removeDS($lists[$card->idList]->name),
+                '%card_name%' => $this->removeDS($card->name),
+                $pattern => DIRECTORY_SEPARATOR,
+            ];
             $path = str_replace(
-                ['%list_name%', '%card_name%', $this->options['destination']['replace_pattern_by_directory_separator'] ?? ''],
-                [$this->removeDS($lists[$card->idList]->name), $this->removeDS($card->name), DIRECTORY_SEPARATOR],
-                $this->options['destination']['path']
+                array_keys($placeholders),
+                array_values($placeholders),
+                $this->options['downloads_paths']['videos']['path']
             );
 
             foreach ($videosIds as $type => $videoIdsPerType) {

@@ -6,19 +6,33 @@ use App\Cli\IOHelper;
 use App\Kernel;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
+use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Yaml\Yaml;
 
-final class VideoDownloader extends Command
+final class DownloadVideos extends Command
 {
+    const COMMAND_NAME = 'download:videos';
+
+    /**
+     * {@inheritdoc}
+     */
+    protected function configure()
+    {
+        /** @noinspection ExceptionsAnnotatingAndHandlingInspection */
+        $this->setName(static::COMMAND_NAME);
+
+        $this->addOption('dry-run', null, InputOption::VALUE_OPTIONAL, 'Execute the script as a dry run.', false);
+    }
+
     /**
      * {@inheritdoc}
      * @throws \RuntimeException
      * @throws \Symfony\Component\Yaml\Exception\ParseException
      */
-    public function execute(InputInterface $input, OutputInterface $output)
+    protected function execute(InputInterface $input, OutputInterface $output)
     {
-        $ioHelper = new IOHelper($input, $output);
+        $ioHelper = new IOHelper($this, $input, $output);
         $config = Yaml::parseFile(Kernel::getProjectRootPath().DIRECTORY_SEPARATOR.'config/app.yml');
 
         // Loop over the different sources

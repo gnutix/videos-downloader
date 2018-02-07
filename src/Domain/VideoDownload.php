@@ -37,7 +37,7 @@ final class VideoDownload
      */
     public function __toString(): string
     {
-        return (string) str_replace(DIRECTORY_SEPARATOR, ' - ', $this->path);
+        return (string) str_replace(DIRECTORY_SEPARATOR, ' - ', trim($this->path, DIRECTORY_SEPARATOR));
     }
 
     /**
@@ -69,6 +69,6 @@ final class VideoDownload
      */
     public function getPath(): string
     {
-        return $this->path;
+        return rtrim($this->path, DIRECTORY_SEPARATOR);
     }
 }
