@@ -31,6 +31,18 @@ final class IOHelper
     }
 
     /**
+     * @return bool
+     */
+    public function isDryRun(): bool
+    {
+        try {
+            return (bool) $this->input->getOption('dry-run');
+        } catch (\InvalidArgumentException $e) {
+            return false;
+        }
+    }
+
+    /**
      * @param string $message
      * @param bool $default
      *
@@ -38,10 +50,6 @@ final class IOHelper
      */
     public function askConfirmation(string $message, bool $default = true): bool
     {
-        if (!$this->isInteractive()) {
-            return true;
-        }
-
         /** @var \Symfony\Component\Console\Helper\QuestionHelper $questionHelper */
         /** @noinspection ExceptionsAnnotatingAndHandlingInspection */
         $questionHelper = $this->command->getHelper('question');
@@ -51,69 +59,21 @@ final class IOHelper
     }
 
     /**
-     * @return bool
-     */
-    public function isDryRun(): bool
-    {
-        try {
-            return $this->input->getOption('dry-run');
-        } catch (\InvalidArgumentException $e) {
-            return false;
-        }
-    }
-
-    /**
-     * @return bool
-     */
-    public function isInteractive(): bool
-    {
-        return $this->input->isInteractive();
-    }
-
-    /**
-     * @param string $message
+     * @param string|array $messages
      * @param bool $newLine
      */
-    public function write(string $message, $newLine = false): void
+    public function write($messages, $newLine = false): void
     {
-        $this->output->write($message, $newLine);
+        $this->output->write($messages, $newLine);
     }
 
     /**
-     * @param int $indentation
+     * @param string|array $messages
+     * @param int $options
      */
-    public function done(int $indentation = 0): void
+    public function writeln($messages, int $options = 0): void
     {
-        $this->output->writeln(str_repeat(' ', $indentation).'<info>Done.</info>');
-    }
-
-    /**
-     * @param string $error
-     * @param array &$errors
-     * @param string $type
-     */
-    public function logError(string $error, array &$errors, string $type = 'error'): void
-    {
-        $this->output->writeln(PHP_EOL.PHP_EOL.'<'.$type.'>'.$error.'</'.$type.'>'.PHP_EOL);
-        $errors[] = $error;
-    }
-
-    /**
-     * @param array $errors
-     * @param string $process
-     * @param string $type
-     * @param int $indentation
-     */
-    public function displayErrors(array $errors, string $process, string $type = 'error', int $indentation = 0): void
-    {
-        $nbErrors = \count($errors);
-        if ($nbErrors > 0) {
-            $this->output->writeln(
-                PHP_EOL.'<'.$type.'>There were '.$nbErrors.' errors during the '.$process.' :</'.$type.'>'
-            );
-
-            $this->listing($errors, $indentation);
-        }
+        $this->output->writeln($messages, $options);
     }
 
     /**
@@ -126,8 +86,21 @@ final class IOHelper
             return sprintf(str_repeat(' ', $indentation).' * %s', $message);
         }, $messages);
 
-        $this->output->write(PHP_EOL);
-        $this->output->writeln($messages);
-        $this->output->write(PHP_EOL);
+        $this->write(PHP_EOL);
+        $this->writeln($messages);
+        $this->write(PHP_EOL);
+    }
+
+    /**
+     * @param callable $callable
+     */
+    public function forceOutput(callable $callable): void
+    {
+        $verbosity = $this->output->getVerbosity();
+        $this->output->setVerbosity(OutputInterface::VERBOSITY_NORMAL);
+
+        $callable();
+
+        $this->output->setVerbosity($verbosity);
     }
 }

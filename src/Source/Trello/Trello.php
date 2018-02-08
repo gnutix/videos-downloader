@@ -42,12 +42,11 @@ final class Trello implements Source
             $trelloLists = $this->client->getBoardLists($this->options['board_id']);
             $trelloCards = $this->client->getBoardCards($this->options['board_id']);
         } catch (Exception $e) {
-            $this->ioHelper->write(
+            $this->ioHelper->writeln(
                 sprintf(
                     '<error>Could not fetch the information from Trello!</error>'.PHP_EOL.PHP_EOL.'    <error>%s</error>'.PHP_EOL,
                     $e->getMessage()
-                ),
-                true
+                )
             );
 
             return [];
@@ -62,37 +61,52 @@ final class Trello implements Source
                 continue;
             }
 
-            /**
-             * Here we remove any directory separator in the list/song name to avoid unwanted nested folders.
-             * Ex: "Songs/AC/DC - Hells Bells" would give "Songs/AC/DC/Hells Bells".
-             *
-             * Then we replace a pattern by a directory separator, to allow having a parent folder with the artist name.
-             * Ex: "Songs/ACDC - Hells Bells" => "Songs/ACDC/Hells Bells"
-             */
-            $pattern = $this->options['downloads_paths']['videos']['replace_pattern_by_directory_separator'] ?? '';
-            $placeholders = [
-                '%list_name%' => $this->removeDS($lists[$card->idList]->name),
-                '%card_name%' => $this->removeDS($card->name),
-                $pattern => DIRECTORY_SEPARATOR,
-            ];
-            $path = str_replace(
-                array_keys($placeholders),
-                array_values($placeholders),
-                $this->options['downloads_paths']['videos']['path']
-            );
-
-            foreach ($videosIds as $type => $videoIdsPerType) {
-                foreach ((array) $videoIdsPerType as $videoId) {
+            foreach ($videosIds as $fileType => $videoIdsPerType) {
+                foreach ((array) $videoIdsPerType as $videoId => $fileExtension) {
                     $uuid = Uuid::uuid4(); // random UUID
 
-                    $videos[(string) $uuid] = new VideoDownload($uuid, $type, $videoId, $path);
+                    $videos[(string) $uuid] = new VideoDownload(
+                        $uuid,
+                        $fileType,
+                        $fileExtension,
+                        $videoId,
+                        $this->generatePath($lists[$card->idList]->name, $card->name)
+                    );
                 }
             }
         }
 
-        $this->ioHelper->done();
+        $this->ioHelper->writeln('<info>Done.</info>');
 
         return $videos;
+    }
+
+    /**
+     * Here we remove any directory separator in the list/song name to avoid unwanted nested folders.
+     * Ex: "Songs/AC/DC - Hells Bells" would give "Songs/AC/DC/Hells Bells".
+     *
+     * Then we replace a pattern by a directory separator, to allow having a parent folder with the artist name.
+     * Ex: "Songs/ACDC - Hells Bells" => "Songs/ACDC/Hells Bells"
+     *
+     * @param string $listName
+     * @param string $cardName
+     *
+     * @return string
+     */
+    private function generatePath(string $listName, string $cardName): string
+    {
+        $placeholders = [
+            '%list_name%' => $this->removeDS($listName),
+            '%card_name%' => $this->removeDS($cardName),
+            $this->options['downloads_paths']['videos']['replace_pattern_by_directory_separator'] ?? ''
+                => DIRECTORY_SEPARATOR,
+        ];
+
+        return str_replace(
+            array_keys($placeholders),
+            array_values($placeholders),
+            $this->options['downloads_paths']['videos']['path']
+        );
     }
 
     /**

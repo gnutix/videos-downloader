@@ -18,11 +18,15 @@ sudo chmod a+rx /usr/local/bin/youtube-dl
 
 ## Running the application
 
-Copy the default configuration file :
+Copy the default configuration file and adapt the values as needed:
 
 `cp config/app.yml.dist config/app.yml`
 
-Adapt the values as needed. Then :
+To get a list of options for running the script :
+
+`bin/app --help`
+
+And finally to run the script :
 
 `bin/app`
 

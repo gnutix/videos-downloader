@@ -12,12 +12,12 @@ use Symfony\Component\Yaml\Yaml;
 
 final class DownloadVideos extends Command
 {
-    const COMMAND_NAME = 'download:videos';
+    public const COMMAND_NAME = 'download:videos';
 
     /**
      * {@inheritdoc}
      */
-    protected function configure()
+    protected function configure(): void
     {
         /** @noinspection ExceptionsAnnotatingAndHandlingInspection */
         $this->setName(static::COMMAND_NAME);
@@ -30,7 +30,7 @@ final class DownloadVideos extends Command
      * @throws \RuntimeException
      * @throws \Symfony\Component\Yaml\Exception\ParseException
      */
-    protected function execute(InputInterface $input, OutputInterface $output)
+    protected function execute(InputInterface $input, OutputInterface $output): void
     {
         $ioHelper = new IOHelper($this, $input, $output);
         $config = Yaml::parseFile(Kernel::getProjectRootPath().DIRECTORY_SEPARATOR.'config/app.yml');

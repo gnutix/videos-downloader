@@ -10,7 +10,10 @@ final class VideoDownload
     private $id;
 
     /** @var string */
-    private $type;
+    private $fileType;
+
+    /** @var string */
+    private $fileExtension;
 
     /** @var string */
     private $videoId;
@@ -20,14 +23,21 @@ final class VideoDownload
 
     /**
      * @param \Ramsey\Uuid\UuidInterface $id
-     * @param string $type
+     * @param string $fileType
+     * @param string $fileExtension
      * @param string $videoId
      * @param string $path
      */
-    public function __construct(UuidInterface $id, string $type, string $videoId, string $path)
-    {
+    public function __construct(
+        UuidInterface $id,
+        string $fileType,
+        string $fileExtension,
+        string $videoId,
+        string $path
+    ) {
         $this->id = $id;
-        $this->type = $type;
+        $this->fileType = $fileType;
+        $this->fileExtension = $fileExtension;
         $this->videoId = $videoId;
         $this->path = $path;
     }
@@ -51,9 +61,17 @@ final class VideoDownload
     /**
      * @return string
      */
-    public function getType(): string
+    public function getFileType(): string
     {
-        return $this->type;
+        return $this->fileType;
+    }
+
+    /**
+     * @return string
+     */
+    public function getFileExtension(): string
+    {
+        return $this->fileExtension;
     }
 
     /**

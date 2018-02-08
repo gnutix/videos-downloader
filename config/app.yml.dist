@@ -31,9 +31,9 @@ platforms:
     youtube:
         class_name: App\Platform\YouTube\YouTube
 
-        # defines which files to download
+        # defines which video files to download
         # the key should match those of "youtube_dl_options" and the value must be the corresponding file extension
-        download_files:
+        download_video_files:
             audio: mp3
             video: mp4
 
@@ -49,7 +49,7 @@ platforms:
             video_files:
 
                 # available variables: see https://github.com/rg3/youtube-dl#output-template
-                youtube_dl_output: &DOWNLOADS_PATH_FORMAT '%(id)s (%(uploader)s, %(upload_date)s)/%(title)s.%(ext)s'
+                _: &DOWNLOADS_PATH_FORMAT '%(id)s (%(uploader)s, %(upload_date)s)/%(title)s.%(ext)s'
 
                 # available variables: %video_id%, %file_extension%
                 path: '%video_id% (*)' # matches '%(id)s (%(uploader)s, %(upload_date)s)'
@@ -57,16 +57,29 @@ platforms:
                 # available variables: %video_id%, %file_extension%
                 filename: '*.%file_extension%' # matches '%(title)s.%(ext)s'
 
+        # Options passed to the 'youtube-dl' python library. Each options set represents one download attempt.
         youtube_dl_options:
-            _default: &DEFAULT_YOUTUBE_DL_OPTION
-                continue: true # resume video download when it failed
-                add-metadata: true
+
+            # Default options for every file type
+            _: &DEFAULT_YOUTUBE_DL_OPTION
+                continue: true # resume video download when it has failed in the middle of it (using .{ext}.part file)
+                add-metadata: true # ensure there's mp3 ID3 tags on the downloaded files
                 output: *DOWNLOADS_PATH_FORMAT
+
             audio:
-                <<: *DEFAULT_YOUTUBE_DL_OPTION
-                extract-audio: true
-                audio-format: mp3
-                audio-quality: 0 # best
+                -
+                    <<: *DEFAULT_YOUTUBE_DL_OPTION
+                    extract-audio: true
+                    audio-format: mp3
+                    audio-quality: 0 # best
+
             video:
-                <<: *DEFAULT_YOUTUBE_DL_OPTION
-                format: 'mp4[height <=? 720]' # Download 720p or lower
+                -
+                    <<: *DEFAULT_YOUTUBE_DL_OPTION
+                    format: 'mp4[height=720]'
+                -
+                    <<: *DEFAULT_YOUTUBE_DL_OPTION
+                    format: 'mp4[height=1080]'
+                -
+                    <<: *DEFAULT_YOUTUBE_DL_OPTION
+                    format: 'mp4[height=480]'
