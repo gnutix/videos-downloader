@@ -2,36 +2,38 @@
 
 namespace App\Platform\YouTube;
 
+use App\Domain\Path;
+
 final class Download
 {
+    /** @var \App\Domain\Path */
+    private $path;
+
+    /** @var string */
+    private $videoId;
+
     /** @var string */
     private $fileType;
 
     /** @var string */
     private $fileExtension;
 
-    /** @var string */
-    private $videoId;
-
-    /** @var string */
-    private $path;
-
     /**
+     * @param \App\Domain\Path $path
+     * @param string $videoId
      * @param string $fileType
      * @param string $fileExtension
-     * @param string $videoId
-     * @param string $path
      */
     public function __construct(
-        string $fileType,
-        string $fileExtension,
+        Path $path,
         string $videoId,
-        string $path
+        string $fileType,
+        string $fileExtension
     ) {
+        $this->path = $path;
+        $this->videoId = $videoId;
         $this->fileType = $fileType;
         $this->fileExtension = $fileExtension;
-        $this->videoId = $videoId;
-        $this->path = $path;
     }
 
     /**
@@ -39,7 +41,23 @@ final class Download
      */
     public function __toString(): string
     {
-        return (string) str_replace(DIRECTORY_SEPARATOR, ' - ', trim($this->path, DIRECTORY_SEPARATOR));
+        return (string) str_replace(DIRECTORY_SEPARATOR, ' - ', trim((string) $this->getPath(), DIRECTORY_SEPARATOR));
+    }
+
+    /**
+     * @return \App\Domain\Path
+     */
+    public function getPath(): Path
+    {
+        return $this->path;
+    }
+
+    /**
+     * @return string
+     */
+    public function getVideoId(): string
+    {
+        return $this->videoId;
     }
 
     /**
@@ -56,21 +74,5 @@ final class Download
     public function getFileExtension(): string
     {
         return $this->fileExtension;
-    }
-
-    /**
-     * @return string
-     */
-    public function getVideoId(): string
-    {
-        return $this->videoId;
-    }
-
-    /**
-     * @return string
-     */
-    public function getPath(): string
-    {
-        return rtrim($this->path, DIRECTORY_SEPARATOR);
     }
 }

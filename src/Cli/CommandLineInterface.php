@@ -44,7 +44,13 @@ final class CommandLineInterface implements UserInterface
         $questionHelper = $this->command->getHelper('question');
 
         /** @noinspection ExceptionsAnnotatingAndHandlingInspection */
-        return $questionHelper->ask($this->input, $this->output, new ConfirmationQuestion($message, $default));
+        $answer = $questionHelper->ask($this->input, $this->output, new ConfirmationQuestion($message, $default));
+
+        if ($this->input->isInteractive() && $answer) {
+            $this->writeln('');
+        }
+
+        return $answer;
     }
 
     /**
@@ -91,5 +97,17 @@ final class CommandLineInterface implements UserInterface
         $callable();
 
         $this->output->setVerbosity($verbosity);
+    }
+
+    /**
+     * @param int $indentation
+     * @param int $characters
+     * @param string $character
+     *
+     * @return string
+     */
+    public function indent(int $indentation = 1, int $characters = 2, string $character = ' '): string
+    {
+        return str_repeat(str_repeat($character, $characters), $indentation);
     }
 }

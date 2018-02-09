@@ -2,6 +2,8 @@
 
 namespace App\Platform;
 
+use App\Domain\Collection;
+use App\Domain\PathPart;
 use App\UI\UserInterface;
 
 interface Platform
@@ -14,8 +16,8 @@ interface Platform
     public function __construct(UserInterface $ui, array $options, bool $dryRun = false);
 
     /**
-     * @param \App\Domain\Content[] $contents
-     * @param string $rootPathPart
+     * @param \App\Domain\Content[]|\App\Domain\Collection $contents
+     * @param \App\Domain\PathPart $rootPathPart
      */
-    public function downloadContents(array $contents, string $rootPathPart);
+    public function synchronizeContents(Collection $contents, PathPart $rootPathPart);
 }

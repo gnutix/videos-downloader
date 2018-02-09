@@ -39,4 +39,16 @@ final class NullUserInterface implements UserInterface
     public function forceOutput(callable $callable): void
     {
     }
+
+    /**
+     * @param int $indentation
+     * @param int $characters
+     * @param string $character
+     *
+     * @return string
+     */
+    public function indent(int $indentation = 1, int $characters = 2, string $character = ' '): string
+    {
+        return '';
+    }
 }

@@ -1,5 +1,10 @@
 # defines which sources and platforms to use during the script execution
 app:
+    path_part:
+        # available variables: %project_root%
+        path: '%project_root%/downloads'
+        priority: -255
+
     sources:
         - trello
     platforms:
@@ -15,71 +20,60 @@ sources:
         # full URL would be: https://trello.com/b/MkYHGxzY/
         board_id: MkYHGxzY
 
-        downloads_paths:
-
-            # defines which (relative) path to save the videos in
-            # will be appended to platforms/*/downloads_paths/root/path
-            videos:
-
-                # available variables: %list_name%, %card_name%
-                path: '%list_name%/%card_name%'
-
-                # defines a pattern to replace by a directory separator in the videos path
-                replace_pattern_by_directory_separator: ' - '
+        path_part:
+            # available variables: %list_name%, %card_name%
+            path: '%list_name%/%card_name%'
+            priority: 50
+            substitutions:
+                ' - ': '/'
 
 platforms:
     youtube:
         class_name: App\Platform\YouTube\YouTube
 
-        # defines which video files to download
-        # the key should match those of "youtube_dl_options" and the value must be the corresponding file extension
-        download_video_files:
-            audio: mp3
-            video: mp4
+        path_part:
+            path: 'YouTube'
+            priority: -50
 
-        downloads_paths:
+        patterns:
 
-            # defines which (absolute) path to save the videos in
-            # available variables: %project_root%
-            root:
-                path: '%project_root%/downloads'
+            # available variables: see https://github.com/rg3/youtube-dl#output-template
+            _: &YOUTUBE_DL_OUTPUT '%(id)s (%(uploader)s, %(upload_date)s)/%(title)s.%(ext)s'
 
-            # defines which (relative) path to save the video files in
-            # will be appended to platforms/*/downloads_paths/root/path and sources/*/downloads_paths/videos/path
-            video_files:
+            # available variables: %video_id%, %file_extension%
+            folder: '%video_id% (*)' # matches '%(id)s (%(uploader)s, %(upload_date)s)'
 
-                # available variables: see https://github.com/rg3/youtube-dl#output-template
-                _: &DOWNLOADS_PATH_FORMAT '%(id)s (%(uploader)s, %(upload_date)s)/%(title)s.%(ext)s'
+            # available variables: %video_id%, %file_extension%
+            filename: '*.%file_extension%' # matches '%(title)s.%(ext)s'
 
-                # available variables: %video_id%, %file_extension%
-                path: '%video_id% (*)' # matches '%(id)s (%(uploader)s, %(upload_date)s)'
-
-                # available variables: %video_id%, %file_extension%
-                filename: '*.%file_extension%' # matches '%(title)s.%(ext)s'
+            # the keys should match those of "youtube_dl_options"
+            extensions:
+                audio: mp3
+                video: mp4
 
         # Options passed to the 'youtube-dl' python library. Each options set represents one download attempt.
-        youtube_dl_options:
-
+        youtube_dl:
             # Default options for every file type
             _: &DEFAULT_YOUTUBE_DL_OPTION
                 continue: true # resume video download when it has failed in the middle of it (using .{ext}.part file)
                 add-metadata: true # ensure there's mp3 ID3 tags on the downloaded files
-                output: *DOWNLOADS_PATH_FORMAT
+                output: *YOUTUBE_DL_OUTPUT
 
-            audio:
-                -
-                    <<: *DEFAULT_YOUTUBE_DL_OPTION
-                    extract-audio: true
-                    audio-format: mp3
-                    audio-quality: 0 # best
+            options:
+                audio:
+                    -
+                        <<: *DEFAULT_YOUTUBE_DL_OPTION
+                        extract-audio: true
+                        audio-format: mp3
+                        audio-quality: 0 # best
 
-            video:
-                -
-                    <<: *DEFAULT_YOUTUBE_DL_OPTION
-                    format: 'mp4[height=720]'
-                -
-                    <<: *DEFAULT_YOUTUBE_DL_OPTION
-                    format: 'mp4[height=1080]'
-                -
-                    <<: *DEFAULT_YOUTUBE_DL_OPTION
-                    format: 'mp4[height=480]'
+                video:
+                    -
+                        <<: *DEFAULT_YOUTUBE_DL_OPTION
+                        format: 'mp4[height <=? 720]'
+                    -
+                        <<: *DEFAULT_YOUTUBE_DL_OPTION
+                        format: 'mp4[height <=? 1080p]'
+                    -
+                        <<: *DEFAULT_YOUTUBE_DL_OPTION
+                        format: 'mp4'

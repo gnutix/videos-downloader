@@ -20,15 +20,24 @@ final class Download extends Command
     {
         /** @noinspection ExceptionsAnnotatingAndHandlingInspection */
         $this->setName(static::COMMAND_NAME)
-            ->addOption('dry-run', null, InputOption::VALUE_OPTIONAL, 'Execute the script as a dry run.', false);
+            ->addOption('dry-run', null, InputOption::VALUE_NONE, 'Execute the script as a dry run.');
     }
 
     /**
      * {@inheritdoc}
+     * @throws \Symfony\Component\Filesystem\Exception\IOException
+     * @throws \Symfony\Component\Yaml\Exception\ParseException
+     * @throws \RuntimeException
      */
     protected function execute(InputInterface $input, OutputInterface $output): void
     {
         /** @noinspection ExceptionsAnnotatingAndHandlingInspection */
-        (new Kernel((bool) $input->getOption('dry-run'), new CommandLineInterface($this, $input, $output)))->boot();
+        $dryRun = (bool) $input->getOption('dry-run');
+
+        if ($dryRun) {
+            $input->setInteractive(false);
+        }
+
+        (new Kernel($dryRun, new CommandLineInterface($this, $input, $output)))->boot();
     }
 }

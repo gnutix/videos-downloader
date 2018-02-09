@@ -2,6 +2,8 @@
 
 namespace App;
 
+use App\Domain\Content;
+use App\Domain\PathPart;
 use App\UI\NullUserInterface;
 use App\UI\UserInterface;
 use Symfony\Component\Filesystem\Filesystem;
@@ -32,15 +34,13 @@ final class Kernel
         $this->config = Yaml::parseFile($this->getProjectDir().DIRECTORY_SEPARATOR.'config/app.yml');
     }
 
+    /**
+     * @throws \RuntimeException
+     * @throws \Symfony\Component\Filesystem\Exception\IOException
+     */
     public function boot(): void
     {
-        $this->download();
-        $this->cleanFilesystem();
-    }
-
-    private function download(): void
-    {
-        $rootPathPart = $this->prepareRootPathPart($this->config['app']['paths']['root']['path_part']);
+        $rootPathPart = $this->getRootPathPart();
 
         // Loop over the different sources
         foreach ((array) $this->config['app']['sources'] as $sourceId) {
@@ -48,7 +48,14 @@ final class Kernel
 
             /** @var \App\Source\Source $source */
             $source = new $sourceConfig['class_name']($this->ui, $sourceConfig);
-            $contents = $source->getContents();
+
+            // Add the root path part
+            $contents = $source->getContents()
+                ->map(function(Content $content) use ($rootPathPart) {
+                    $content->getPath()->add($rootPathPart);
+
+                    return $content;
+                });
 
             // Loop over the different platforms
             foreach ((array) $this->config['app']['platforms'] as $platformId) {
@@ -56,14 +63,9 @@ final class Kernel
 
                 /** @var \App\Platform\Platform $platform */
                 $platform = new $platformConfig['class_name']($this->ui, $platformConfig, $this->dryRun);
-                $platform->downloadContents($contents, $rootPathPart);
+                $platform->synchronizeContents($contents, $rootPathPart);
             }
         }
-    }
-
-    private function cleanFilesystem(): void
-    {
-        /** @todo Extract code from Platform/YouTube and make it universal... */
     }
 
     /**
@@ -81,23 +83,22 @@ final class Kernel
     }
 
     /**
-     * @param string $pathPart
+     * @return \App\Domain\PathPart
      *
-     * @return string
      * @throws \RuntimeException
      * @throws \Symfony\Component\Filesystem\Exception\IOException
      */
-    private function prepareRootPathPart(string $pathPart): string
+    private function getRootPathPart(): PathPart
     {
-        $pathPart = str_replace('%project_root%', $this->getProjectDir(), $pathPart);
-
-        if (empty($pathPart) || DIRECTORY_SEPARATOR !== $pathPart{0}) {
-            throw new \RuntimeException('The root path must be an absolute folder path.');
-        }
+        $pathPartConfig = $this->config['app']['path_part'];
+        $pathPartConfig['substitutions'] = [
+                '%project_root%' => $this->getProjectDir()
+            ] + ($pathPartConfig['substitutions'] ?? []);
+        $rootPathPart = new PathPart($pathPartConfig);
 
         // Try to create the root directory... 'cause if it fails, nothing will work.
-        (new Filesystem())->mkdir($pathPart);
+        (new Filesystem())->mkdir($rootPathPart->getPath());
 
-        return rtrim($pathPart, DIRECTORY_SEPARATOR);
+        return $rootPathPart;
     }
 }

@@ -11,7 +11,7 @@
         "symfony/filesystem": "^4.0",
         "symfony/finder": "^4.0",
         "symfony/yaml": "^4.0",
-        "ramsey/uuid": "^3.7",
+        "doctrine/collections": "^1.5",
         "stevenmaguire/trello-php": "^0.4.1",
         "norkunas/youtube-dl-php": "^1.0"
     },

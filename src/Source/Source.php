@@ -3,6 +3,7 @@
 namespace App\Source;
 
 use App\UI\UserInterface;
+use App\Domain\Collection;
 
 interface Source
 {
@@ -15,7 +16,7 @@ interface Source
     public function __construct(UserInterface $ui, array $options);
 
     /**
-     * @return \App\Domain\Content[]
+     * @return \App\Domain\Content[]|\App\Domain\Collection
      */
-    public function getContents(): array;
+    public function getContents(): Collection;
 }
