@@ -2,12 +2,13 @@
 
 namespace App\Cli;
 
+use App\UI\UserInterface;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Question\ConfirmationQuestion;
 
-final class IOHelper
+final class CommandLineInterface implements UserInterface
 {
     /** @var Command */
     private $command;
@@ -28,18 +29,6 @@ final class IOHelper
         $this->command = $command;
         $this->input = $input;
         $this->output = $output;
-    }
-
-    /**
-     * @return bool
-     */
-    public function isDryRun(): bool
-    {
-        try {
-            return (bool) $this->input->getOption('dry-run');
-        } catch (\InvalidArgumentException $e) {
-            return false;
-        }
     }
 
     /**

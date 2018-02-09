@@ -2,23 +2,20 @@
 
 namespace App\Source;
 
-use App\Cli\IOHelper;
-use App\Platform\Platform;
+use App\UI\UserInterface;
 
 interface Source
 {
     /**
-     * @param \App\Cli\IOHelper $ioHelper
+     * @param \App\UI\UserInterface $ui
      * @param array $options
      *
      * @throws \InvalidArgumentException
      */
-    public function __construct(IOHelper $ioHelper, array $options);
+    public function __construct(UserInterface $ui, array $options);
 
     /**
-     * @param \App\Platform\Platform $platform
-     *
-     * @return \App\Domain\VideoDownload[]
+     * @return \App\Domain\Content[]
      */
-    public function getVideos(Platform $platform): array;
+    public function getContents(): array;
 }

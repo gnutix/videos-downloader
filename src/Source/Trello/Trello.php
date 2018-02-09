@@ -2,18 +2,16 @@
 
 namespace App\Source\Trello;
 
-use App\Cli\IOHelper;
-use App\Domain\VideoDownload;
-use App\Platform\Platform;
+use App\Domain\Content;
 use App\Source\Source;
-use Ramsey\Uuid\Uuid;
+use App\UI\UserInterface;
 use Stevenmaguire\Services\Trello\Client;
 use Stevenmaguire\Services\Trello\Exceptions\Exception;
 
 final class Trello implements Source
 {
-    /** @var IOHelper */
-    private $ioHelper;
+    /** @var \App\UI\UserInterface */
+    private $ui;
 
     /** @var array */
     private $options;
@@ -24,9 +22,9 @@ final class Trello implements Source
     /**
      * {@inheritdoc}
      */
-    public function __construct(IOHelper $ioHelper, array $options)
+    public function __construct(UserInterface $ui, array $options)
     {
-        $this->ioHelper = $ioHelper;
+        $this->ui = $ui;
         $this->options = $options;
         $this->client = new Client(['token' => $options['api_key']]);
     }
@@ -34,15 +32,15 @@ final class Trello implements Source
     /**
      * {@inheritdoc}
      */
-    public function getVideos(Platform $platform): array
+    public function getContents(): array
     {
-        $this->ioHelper->write('Fetch the videos from the source (Trello)... ');
+        $this->ui->write('Fetch the contents from Trello... ');
 
         try {
             $trelloLists = $this->client->getBoardLists($this->options['board_id']);
             $trelloCards = $this->client->getBoardCards($this->options['board_id']);
         } catch (Exception $e) {
-            $this->ioHelper->writeln(
+            $this->ui->writeln(
                 sprintf(
                     '<error>Could not fetch the information from Trello!</error>'.PHP_EOL.PHP_EOL.'    <error>%s</error>'.PHP_EOL,
                     $e->getMessage()
@@ -55,30 +53,14 @@ final class Trello implements Source
         // Add the list ID as a key to the array so it's easier to find it
         $lists = array_combine(array_column($trelloLists, 'id'), $trelloLists);
 
-        $videos = [];
+        $contents = [];
         foreach ($trelloCards as $card) {
-            if (empty($videosIds = $platform->extractVideosIds($card->desc))) {
-                continue;
-            }
-
-            foreach ($videosIds as $fileType => $videoIdsPerType) {
-                foreach ((array) $videoIdsPerType as $videoId => $fileExtension) {
-                    $uuid = Uuid::uuid4(); // random UUID
-
-                    $videos[(string) $uuid] = new VideoDownload(
-                        $uuid,
-                        $fileType,
-                        $fileExtension,
-                        $videoId,
-                        $this->generatePath($lists[$card->idList]->name, $card->name)
-                    );
-                }
-            }
+            $contents[] = new Content($card->desc, $this->generatePath($lists[$card->idList]->name, $card->name));
         }
 
-        $this->ioHelper->writeln('<info>Done.</info>');
+        $this->ui->writeln('<info>Done.</info>');
 
-        return $videos;
+        return $contents;
     }
 
     /**
@@ -98,14 +80,13 @@ final class Trello implements Source
         $placeholders = [
             '%list_name%' => $this->removeDS($listName),
             '%card_name%' => $this->removeDS($cardName),
-            $this->options['downloads_paths']['videos']['replace_pattern_by_directory_separator'] ?? ''
-                => DIRECTORY_SEPARATOR,
+            $this->options['paths']['videos_folder']['replace_pattern_by_directory_separator'] => DIRECTORY_SEPARATOR,
         ];
 
         return str_replace(
             array_keys($placeholders),
             array_values($placeholders),
-            $this->options['downloads_paths']['videos']['path']
+            $this->options['paths']['videos_folder']['path_part']
         );
     }
 

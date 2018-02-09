@@ -2,10 +2,9 @@
 
 namespace App\Platform\YouTube;
 
-use App\Cli\IOHelper;
-use App\Kernel;
+use App\Domain\Content;
 use App\Platform\Platform;
-use App\Domain\VideoDownload;
+use App\UI\UserInterface;
 use App\YoutubeDl\Exception as YoutubeDlException;
 use App\YoutubeDl\YoutubeDl;
 use Symfony\Component\Filesystem\Filesystem;
@@ -18,124 +17,149 @@ final class YouTube implements Platform
     private const YOUTUBE_URL_REGEX_MATCHES_ID_INDEX = 5;
     private const YOUTUBE_URL_PREFIX = 'https://www.youtube.com/watch?v=';
 
-    /** @var IOHelper */
-    private $ioHelper;
+    /** @var \App\UI\UserInterface */
+    private $ui;
 
     /** @var array */
     private $options;
 
     /** @var string */
-    private $downloadsPath;
+    private $dryRun;
 
     /**
      * {@inheritdoc}
      * @throws \RuntimeException
      * @throws \Symfony\Component\Filesystem\Exception\IOException
      */
-    public function __construct(IOHelper $ioHelper, array $options)
+    public function __construct(UserInterface $ui, array $options, bool $dryRun = false)
     {
-        $this->ioHelper = $ioHelper;
+        $this->ui = $ui;
         $this->options = $options;
-        $this->downloadsPath = $this->getDownloadsPath();
+        $this->dryRun = $dryRun;
     }
 
     /**
      * {@inheritdoc}
-     */
-    public function extractVideosIds($input): array
-    {
-        if (preg_match_all(static::YOUTUBE_URL_REGEX, $input, $youtubeUrls)) {
-            $videoIds = [];
-
-            foreach ((array) $youtubeUrls[static::YOUTUBE_URL_REGEX_MATCHES_ID_INDEX] as $youtubeId) {
-                foreach (array_keys($this->options['youtube_dl']['options']) as $videoFileType) {
-                    $videoIds[$videoFileType][$youtubeId]
-                        = $this->options['downloads_paths']['video_files']['extensions'][$videoFileType];
-                }
-            }
-
-            return $videoIds;
-        }
-
-        return [];
-    }
-
-    /**
-     * {@inheritdoc}
+     * @param \App\Domain\Content[] $contents
      * @throws \RuntimeException
      */
-    public function downloadVideos(array $videoDownloads): void
+    public function downloadContents(array $contents, string $rootPathPart): void
     {
-        if (empty($videoDownloads)) {
+        if (empty($contents)) {
             return;
         }
 
-        $this->downloadVideosFromYouTube($this->prepareVideosForDownload($videoDownloads));
+        // Prepend the platform and root path parts
+        $downloads = [];
+        foreach ($contents as $content) {
+            $content->addPathPart($this->options['paths']['path_part'], Content::PATH_PART_PREPEND);
+            $content->addPathPart($rootPathPart, Content::PATH_PART_PREPEND);
+
+            foreach ($this->extractDownloads($content) as $download) {
+                $downloads[] = $download;
+            }
+        }
+
+        // This is a bit of a code hack... but it works :)
+        $downloadPath = (new Content('', $rootPathPart))->addPathPart($this->options['paths']['path_part'])->getPath();
+
+        // Try to create the downloads directory... 'cause if it fails, nothing will work.
+        (new Filesystem())->mkdir($downloadPath);
+
+        $downloads = $this->prepareForDownload($downloads, $downloadPath);
+
+        $this->download($downloads, $downloadPath);
     }
 
     /**
-     * @param \App\Domain\VideoDownload[] $videoDownloads
+     * {@inheritdoc}
+     */
+    public function extractDownloads(Content $content): array
+    {
+        if (!preg_match_all(static::YOUTUBE_URL_REGEX, $content->getData(), $youtubeUrls)) {
+            return [];
+        }
+
+        $downloads = [];
+        foreach ((array) $youtubeUrls[static::YOUTUBE_URL_REGEX_MATCHES_ID_INDEX] as $youtubeId) {
+            foreach (array_keys($this->options['youtube_dl']['options']) as $videoFileType) {
+                $downloads[] = new Download(
+                    $videoFileType,
+                    $this->options['paths']['video_files']['extensions'][$videoFileType],
+                    $youtubeId,
+                    $content->getPath()
+                );
+            }
+        }
+
+        return $downloads;
+    }
+
+    /**
+     * @param \App\Platform\YouTube\Download[] $downloads
+     * @param string $downloadPath
      *
      * @return array
      */
-    private function prepareVideosForDownload(array $videoDownloads): array
+    private function prepareForDownload(array $downloads, string $downloadPath): array
     {
-        $this->ioHelper->write('Skip the videos having their files already downloaded... ');
+        $this->ui->write('Skip the contents having their files already downloaded... ');
 
-        /** @var \SplFileInfo[] $completedVideoDownloadsFolders */
-        $completedVideoDownloadsFolders = [];
+        /** @var \SplFileInfo[] $completedDownloadsFolders */
+        $completedDownloadsFolders = [];
 
         // Passing the value by reference prevents PHP from creating a copy of the array
-        foreach ($videoDownloads as &$videoDownload) {
+        foreach ($downloads as $downloadKey => &$download) {
             $placeholders = [
-                '%video_id%' => $videoDownload->getVideoId(),
-                '%file_extension%' => $videoDownload->getFileExtension(),
+                '%video_id%' => $download->getVideoId(),
+                '%file_extension%' => $download->getFileExtension(),
             ];
 
-            /** @var \Symfony\Component\Finder\Finder $videoDownloadFolderFinder */
+            /** @var \Symfony\Component\Finder\Finder $downloadFolderFinder */
             try {
-                $videoDownloadFolderFinder = (new Finder())
+                $downloadFolderFinder = (new Finder())
                     ->files()
                     ->depth('== 0')
                     ->in(
-                        sprintf(
-                            '%s'.DIRECTORY_SEPARATOR.'%s'.DIRECTORY_SEPARATOR.'%s',
-                            $this->downloadsPath,
-                            $videoDownload->getPath(),
-                            str_replace(
-                                array_keys($placeholders),
-                                array_values($placeholders),
-                                $this->options['downloads_paths']['video_files']['path']
-                            )
+                        implode(
+                            DIRECTORY_SEPARATOR,
+                            [
+                                $download->getPath(),
+                                str_replace(
+                                    array_keys($placeholders),
+                                    array_values($placeholders),
+                                    $this->options['paths']['video_files']['path_part']
+                                ),
+                            ]
                         )
                     )
                     ->name(
                         str_replace(
                             array_keys($placeholders),
                             array_values($placeholders),
-                            $this->options['downloads_paths']['video_files']['filename']
+                            $this->options['paths']['video_files']['filename']
                         )
                     );
 
-                foreach ($videoDownloadFolderFinder as $videoDownloadFolder) {
-                    unset($videoDownloads[(string) $videoDownload->getId()]);
+                foreach ($downloadFolderFinder as $downloadFolder) {
+                    unset($downloads[$downloadKey]);
 
-                    $parentFolder = $videoDownloadFolder->getPathInfo();
+                    $parentFolder = $downloadFolder->getPathInfo();
 
                     // Using a key ensures there's no duplicates
-                    $completedVideoDownloadsFolders[$parentFolder->getRealPath()] = $parentFolder;
+                    $completedDownloadsFolders[$parentFolder->getRealPath()] = $parentFolder;
                 }
             } catch (\InvalidArgumentException $e) {
                 // This is not the folder you're looking for. You can go about your business. Move along, move along...
             }
         }
-        unset($videoDownload); // See https://alephnull.uk/call-unset-after-php-foreach-loop-values-passed-by-reference
+        unset($download); // See https://alephnull.uk/call-unset-after-php-foreach-loop-values-passed-by-reference
 
-        $this->ioHelper->writeln('<info>Done.</info>');
-        $this->ioHelper->write(
+        $this->ui->writeln('<info>Done.</info>');
+        $this->ui->write(
             sprintf(
-                'Synchronize the <info>%s</info> folder with the videos from the source... ',
-                $this->downloadsPath
+                'Synchronize the <info>%s</info> folder with the downloaded contents... ',
+                $downloadPath
             )
         );
 
@@ -145,16 +169,16 @@ final class YouTube implements Platform
             iterator_to_array(
                 (new Finder())
                     ->directories()
-                    ->in($this->downloadsPath)
-                    ->filter(function(\SplFileInfo $folder) use ($completedVideoDownloadsFolders) {
+                    ->in($downloadPath)
+                    ->filter(function(\SplFileInfo $folder) use ($downloadPath, $completedDownloadsFolders) {
 
                         // Try exact folder matching
-                        if (isset($completedVideoDownloadsFolders[$folder->getRealPath()])) {
+                        if (isset($completedDownloadsFolders[$folder->getRealPath()])) {
                             return false;
                         }
 
                         // Try recursive parent folder matching
-                        foreach ($completedVideoDownloadsFolders as $path) {
+                        foreach ($completedDownloadsFolders as $path) {
                             do {
                                 // Get the parent folder
                                 $path = $path->getPathInfo();
@@ -164,47 +188,49 @@ final class YouTube implements Platform
                                 }
 
                                 // Until we reach the downloads root folder
-                            } while ($path->getRealPath() !== $this->downloadsPath);
+                            } while ($path->getRealPath() !== $downloadPath);
                         }
 
                         return true;
                     })
-            )
+            ),
+            $downloadPath
         );
 
-        $this->ioHelper->writeln(PHP_EOL.'<info>Done.</info>'.PHP_EOL);
+        $this->ui->writeln(PHP_EOL.'<info>Done.</info>'.PHP_EOL);
 
-        return $videoDownloads;
+        return $downloads;
     }
 
     /**
      * @param array $foldersToRemove
+     * @param string $downloadPath
      *
      * @return bool Whether folders were removed or not.
      */
-    private function removeFolders(array $foldersToRemove): bool
+    private function removeFolders(array $foldersToRemove, string $downloadPath): bool
     {
         if (empty($foldersToRemove)) {
             return false;
         }
 
-        $this->ioHelper->writeln(PHP_EOL);
+        $this->ui->writeln(PHP_EOL);
 
         $confirmationDefault = true;
         $nbFoldersToRemove = \count($foldersToRemove);
 
         // If there's less than 10 folders, we can display them
         if ($nbFoldersToRemove <= 10) {
-            $this->ioHelper->writeln(
+            $this->ui->writeln(
                 sprintf(
                     $this->i().'The script is about to remove the following folders from <info>%s</info>:',
-                    $this->downloadsPath
+                    $downloadPath
                 )
             );
-            $this->ioHelper->listing(
+            $this->ui->listing(
                 array_map(
-                    function (string $path) {
-                        return '<info>'.str_replace($this->downloadsPath.DIRECTORY_SEPARATOR, '', $path).'</info>';
+                    function (string $path) use ($downloadPath) {
+                        return '<info>'.str_replace($downloadPath.DIRECTORY_SEPARATOR, '', $path).'</info>';
                     },
                     $foldersToRemove
                 ),
@@ -213,18 +239,18 @@ final class YouTube implements Platform
         } else {
             $confirmationDefault = false;
 
-            $this->ioHelper->write(
+            $this->ui->write(
                 sprintf(
                     $this->i().'The script is about to remove <question> %s </question> folders from <info>%s</info>. ',
                     $nbFoldersToRemove,
-                    $this->downloadsPath
+                    $downloadPath
                 )
             );
         }
 
         $foldersWereRemoved = false;
 
-        $this->ioHelper->write($this->i());
+        $this->ui->write($this->i());
         if ($this->moveAlong($confirmationDefault)) {
             return $foldersWereRemoved;
         }
@@ -238,7 +264,7 @@ final class YouTube implements Platform
 
                 $foldersWereRemoved = true;
 
-                $this->ioHelper->writeln(
+                $this->ui->writeln(
                     sprintf(
                         '%s* The folder <info>%s</info> has been removed.',
                         str_repeat($this->i(), 2),
@@ -262,55 +288,58 @@ final class YouTube implements Platform
     }
 
     /**
-     * @param \App\Domain\VideoDownload[] $videoDownloads
+     * @param \App\Platform\YouTube\Download[] $downloads
+     * @param string $downloadPath
      *
      * @throws \RuntimeException
      */
-    private function downloadVideosFromYouTube(array $videoDownloads)
+    private function download(array $downloads, string $downloadPath)
     {
-        $this->ioHelper->writeln('Download videos from YouTube... '.PHP_EOL);
+        $this->ui->writeln('Download files from YouTube... '.PHP_EOL);
 
-        if (empty($videoDownloads)) {
-            $this->ioHelper->writeln('<comment>Nothing to download.</comment>');
+        if (empty($downloads)) {
+            $this->ui->writeln('<comment>Nothing to download.</comment>');
 
             return;
         }
 
-        $this->ioHelper->writeln(
+        $this->ui->writeln(
             sprintf(
                 $this->i().'The script is about to download <question> %s </question> files into <info>%s</info>. '.PHP_EOL,
-                \count($videoDownloads),
-                $this->downloadsPath
+                \count($downloads),
+                $downloadPath
             )
         );
 
-        $this->ioHelper->write($this->i());
+        $this->ui->write($this->i());
         if ($this->moveAlong()) {
-            $this->ioHelper->writeln(PHP_EOL.'<info>Done.</info>'.PHP_EOL);
+            $this->ui->writeln(PHP_EOL.'<info>Done.</info>'.PHP_EOL);
 
             return;
         }
 
         $errors = [];
-        foreach ($videoDownloads as $videoDownload) {
-            $this->ioHelper->write(
+        foreach ($downloads as $download) {
+            $this->ui->write(
                 sprintf(
                     '%s* [<comment>%s</comment>][<comment>%s</comment>] Download the %s file in <info>%s</info>... ',
                     str_repeat($this->i(), 2),
-                    $videoDownload->getVideoId(),
-                    $videoDownload->getFileType(),
-                    $videoDownload->getFileExtension(),
-                    $videoDownload->getPath()
+                    $download->getVideoId(),
+                    $download->getFileType(),
+                    $download->getFileExtension(),
+                    $download->getPath()
                 )
             );
 
-            $options = $this->options['youtube_dl']['options'][$videoDownload->getFileType()];
+            $options = $this->options['youtube_dl']['options'][$download->getFileType()];
             $nbAttempts = \count($options);
 
             $attempt = 0;
             while (true) {
                 try {
-                    $this->downloadFromYouTube($videoDownload, $options[$attempt]);
+                    $this->doDownload($download, $options[$attempt]);
+
+                    $this->ui->writeln('<info>Done.</info>');
                     break;
 
                 // These are errors from YouTube like "video unavailable" or "account closed": there's no point trying.
@@ -332,69 +361,49 @@ final class YouTube implements Platform
         }
         $this->displayErrors($errors, 'download of files', 'error', 1);
 
-        $this->ioHelper->writeln(PHP_EOL.'<info>Done.</info>'.PHP_EOL);
+        $this->ui->writeln(PHP_EOL.'<info>Done.</info>'.PHP_EOL);
     }
 
     /**
-     * @param VideoDownload $videoDownload
+     * @param \App\Platform\YouTube\Download $download
      * @param array $youtubeDlOptions
      *
      * @throws \Exception
      */
-    private function downloadFromYouTube(VideoDownload $videoDownload, array $youtubeDlOptions)
+    private function doDownload(Download $download, array $youtubeDlOptions)
     {
-        $path = $this->downloadsPath.DIRECTORY_SEPARATOR.$videoDownload->getPath();
-
         $dl = new YoutubeDl($youtubeDlOptions);
-        $dl->setDownloadPath($path);
+        $dl->setDownloadPath($download->getPath());
 
         try {
-            (new Filesystem())->mkdir($path);
-            $dl->download(static::YOUTUBE_URL_PREFIX.$videoDownload->getVideoId());
+            (new Filesystem())->mkdir($download->getPath());
+            $dl->download(static::YOUTUBE_URL_PREFIX.$download->getVideoId());
         } catch (\Exception $e) {
 
             // Add more custom exceptions than those already provided by YoutubeDl
             if (preg_match('/this video is unavailable/i', $e->getMessage())) {
                 throw new YoutubeDlException\VideoUnavailableException(
-                    'The video '.$videoDownload->getVideoId().' is unavailable.', 0, $e
+                    'The video '.$download->getVideoId().' is unavailable.', 0, $e
                 );
             }
             if (preg_match('/this video has been removed by the user/i', $e->getMessage())) {
                 throw new YoutubeDlException\VideoRemovedByUserException(
-                    'The video '.$videoDownload->getVideoId().' has been removed by its user.', 0, $e
+                    'The video '.$download->getVideoId().' has been removed by its user.', 0, $e
                 );
             }
             if (preg_match('/the uploader has closed their YouTube account/i', $e->getMessage())) {
                 throw new YoutubeDlException\ChannelRemovedByUserException(
-                    'The channel previously containing the video '.$videoDownload->getVideoId().' has been removed by its user.', 0, $e
+                    'The channel previously containing the video '.$download->getVideoId().' has been removed by its user.', 0, $e
                 );
             }
             if (preg_match('/who has blocked it on copyright grounds/i', $e->getMessage())) {
                 throw new YoutubeDlException\VideoBlockedByCopyrightException(
-                    'The video '.$videoDownload->getVideoId().' has been block for copyright infringement.', 0, $e
+                    'The video '.$download->getVideoId().' has been block for copyright infringement.', 0, $e
                 );
             }
 
             throw $e;
         }
-
-        $this->ioHelper->writeln('<info>Done.</info>');
-    }
-
-    /**
-     * @return string
-     * @throws \RuntimeException
-     * @throws \Symfony\Component\Filesystem\Exception\IOException
-     */
-    private function getDownloadsPath(): string
-    {
-        $projectRoot = Kernel::getProjectRootPath();
-        $downloadsPath = str_replace('%project_root%', $projectRoot, $this->options['downloads_paths']['root']['path']);
-
-        // Try to create the downloads root directory... 'cause if it fails, nothing will work.
-        (new Filesystem())->mkdir($downloadsPath);
-
-        return rtrim($downloadsPath, DIRECTORY_SEPARATOR);
     }
 
     /**
@@ -405,20 +414,20 @@ final class YouTube implements Platform
     private function moveAlong($confirmationDefault = true): bool
     {
         // Two reasons to move along: dry-run and declined confirmation.
-        if ($this->ioHelper->isDryRun()) {
-            $this->ioHelper->writeln('<info>[DRY-RUN]</info> Not doing anything...');
+        if ($this->dryRun) {
+            $this->ui->writeln('<info>[DRY-RUN]</info> Not doing anything...');
 
             return true;
         }
 
         $confirmationQuestion = '<question>Continue?</question> ('.($confirmationDefault ? 'Y/n' : 'y/N').') ';
-        if (!$this->ioHelper->askConfirmation($confirmationQuestion, $confirmationDefault)) {
-            $this->ioHelper->writeln(PHP_EOL.$this->i().'Move along...');
+        if (!$this->ui->askConfirmation($confirmationQuestion, $confirmationDefault)) {
+            $this->ui->writeln(PHP_EOL.$this->i().'Move along...');
 
             return true;
         }
 
-        $this->ioHelper->writeln('');
+        $this->ui->writeln('');
 
         return false;
     }
@@ -439,7 +448,7 @@ final class YouTube implements Platform
      */
     public function logError(string $error, array &$errors): void
     {
-        $this->ioHelper->writeln('<error>An error occurred.</error>');
+        $this->ui->writeln('<error>An error occurred.</error>');
         $errors[] = $error;
     }
 
@@ -453,12 +462,12 @@ final class YouTube implements Platform
     {
         $nbErrors = \count($errors);
         if ($nbErrors > 0) {
-            $this->ioHelper->forceOutput(function () use ($nbErrors, $errors, $process, $type, $indentation) {
-                $this->ioHelper->writeln(
+            $this->ui->forceOutput(function () use ($nbErrors, $errors, $process, $type, $indentation) {
+                $this->ui->writeln(
                     PHP_EOL.PHP_EOL.'<'.$type.'>There were '.$nbErrors.' errors during the '.$process.' :</'.$type.'>'
                 );
 
-                $this->ioHelper->listing($errors, $indentation);
+                $this->ui->listing($errors, $indentation);
             });
         }
     }

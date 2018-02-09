@@ -1,14 +1,9 @@
 <?php declare(strict_types=1);
 
-namespace App\Domain;
+namespace App\Platform\YouTube;
 
-use Ramsey\Uuid\UuidInterface;
-
-final class VideoDownload
+final class Download
 {
-    /** @var \Ramsey\Uuid\UuidInterface */
-    private $id;
-
     /** @var string */
     private $fileType;
 
@@ -22,20 +17,17 @@ final class VideoDownload
     private $path;
 
     /**
-     * @param \Ramsey\Uuid\UuidInterface $id
      * @param string $fileType
      * @param string $fileExtension
      * @param string $videoId
      * @param string $path
      */
     public function __construct(
-        UuidInterface $id,
         string $fileType,
         string $fileExtension,
         string $videoId,
         string $path
     ) {
-        $this->id = $id;
         $this->fileType = $fileType;
         $this->fileExtension = $fileExtension;
         $this->videoId = $videoId;
@@ -48,14 +40,6 @@ final class VideoDownload
     public function __toString(): string
     {
         return (string) str_replace(DIRECTORY_SEPARATOR, ' - ', trim($this->path, DIRECTORY_SEPARATOR));
-    }
-
-    /**
-     * @return \Ramsey\Uuid\UuidInterface
-     */
-    public function getId(): UuidInterface
-    {
-        return $this->id;
     }
 
     /**

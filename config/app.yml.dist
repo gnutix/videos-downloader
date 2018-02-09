@@ -1,5 +1,5 @@
 # defines which sources and platforms to use during the script execution
-config:
+app:
     sources:
         - trello
     platforms:

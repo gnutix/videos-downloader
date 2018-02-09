@@ -2,25 +2,20 @@
 
 namespace App\Platform;
 
-use App\Cli\IOHelper;
+use App\UI\UserInterface;
 
 interface Platform
 {
     /**
-     * @param IOHelper $ioHelper
+     * @param \App\UI\UserInterface $ui
      * @param array $options
+     * @param bool $dryRun
      */
-    public function __construct(IOHelper $ioHelper, array $options);
+    public function __construct(UserInterface $ui, array $options, bool $dryRun = false);
 
     /**
-     * @param $input
-     *
-     * @return string[][]
+     * @param \App\Domain\Content[] $contents
+     * @param string $rootPathPart
      */
-    public function extractVideosIds($input): array;
-
-    /**
-     * @param \App\Domain\VideoDownload[] $videoDownloads
-     */
-    public function downloadVideos(array $videoDownloads);
+    public function downloadContents(array $contents, string $rootPathPart);
 }

@@ -2,13 +2,13 @@
 <?php
 require __DIR__.'/../vendor/autoload.php';
 
-use App\Cli\Command\DownloadVideos;
+use App\Cli\Command\Download;
 use Symfony\Component\Console\Application;
 
 putenv('PROJECT_ROOT='.dirname(__DIR__));
 
 $application = (new Application())
-    ->add(new DownloadVideos())
+    ->add(new Download())
     ->getApplication()
-    ->setDefaultCommand(DownloadVideos::COMMAND_NAME, true)
+    ->setDefaultCommand(Download::COMMAND_NAME, true)
     ->run();
