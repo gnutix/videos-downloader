@@ -403,8 +403,11 @@ REGEX;
                     $this->ui->writeln('<info>Done.</info>');
                     break;
 
-                // These are errors from YouTube like "video unavailable" or "account closed": there's no point trying.
-                } catch (YoutubeDlException\CustomYoutubeDlException $e) {
+                } catch (YoutubeDlException\ChannelRemovedByUserException
+                    | YoutubeDlException\VideoBlockedByCopyrightException
+                    | YoutubeDlException\VideoRemovedByUserException
+                    | YoutubeDlException\VideoUnavailableException
+                $e) {
                     $this->logError($e->getMessage(), $errors);
                     break;
 

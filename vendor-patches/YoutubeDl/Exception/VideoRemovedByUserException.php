@@ -4,6 +4,6 @@ namespace App\YoutubeDl\Exception;
 
 use YoutubeDl\Exception\YoutubeDlException;
 
-final class VideoRemovedByUserException extends YoutubeDlException implements CustomYoutubeDlException
+final class VideoRemovedByUserException extends YoutubeDlException
 {
 }

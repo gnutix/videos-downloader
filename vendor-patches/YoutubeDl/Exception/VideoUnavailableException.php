@@ -4,6 +4,6 @@ namespace App\YoutubeDl\Exception;
 
 use YoutubeDl\Exception\YoutubeDlException;
 
-final class VideoUnavailableException extends YoutubeDlException implements CustomYoutubeDlException
+final class VideoUnavailableException extends YoutubeDlException
 {
 }
