@@ -21,14 +21,6 @@ final class NullUserInterface implements UserInterface
     /**
      * {@inheritdoc}
      */
-    public function askConfirmation(string $message, bool $default = true): bool
-    {
-        return true;
-    }
-
-    /**
-     * {@inheritdoc}
-     */
     public function listing(array $messages, int $indentation = 0): void
     {
     }
@@ -41,14 +33,32 @@ final class NullUserInterface implements UserInterface
     }
 
     /**
-     * @param int $indentation
-     * @param int $characters
-     * @param string $character
-     *
-     * @return string
+     * {@inheritdoc}
      */
     public function indent(int $indentation = 1, int $characters = 2, string $character = ' '): string
     {
         return '';
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function confirm(bool $confirmationDefault = true): bool
+    {
+        return true;
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function logError(string $error, array &$errors): void
+    {
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function displayErrors(array $errors, string $process, string $type = 'error', int $indentation = 0): void
+    {
     }
 }

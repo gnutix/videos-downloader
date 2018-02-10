@@ -17,12 +17,11 @@ interface UserInterface
     public function writeln($messages, int $options = 0): void;
 
     /**
-     * @param string $message
-     * @param bool $default
+     * @param bool $confirmationDefault
      *
      * @return bool
      */
-    public function askConfirmation(string $message, bool $default = true): bool;
+    public function confirm(bool $confirmationDefault = true): bool;
 
     /**
      * @param array $messages
@@ -43,4 +42,18 @@ interface UserInterface
      * @return string
      */
     public function indent(int $indentation = 1, int $characters = 2, string $character = ' '): string;
+
+    /**
+     * @param string $error
+     * @param array &$errors
+     */
+    public function logError(string $error, array &$errors): void;
+
+    /**
+     * @param array $errors
+     * @param string $process
+     * @param string $type
+     * @param int $indentation
+     */
+    public function displayErrors(array $errors, string $process, string $type = 'error', int $indentation = 0): void;
 }

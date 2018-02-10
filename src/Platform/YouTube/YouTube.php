@@ -235,7 +235,7 @@ REGEX;
     }
 
     /**
-     * @param \App\Domain\Collection|\SplFileInfo[] $foldersToRemove
+     * @param \SplFileInfo[]|\App\Domain\Collection $foldersToRemove
      * @param \App\Domain\Path $downloadPath
      *
      * @return bool Whether folders were removed or not.
@@ -287,11 +287,11 @@ REGEX;
         $foldersWereRemoved = false;
 
         $this->ui->write($this->ui->indent());
-        if ($this->shouldStopExecution($confirmationDefault)) {
+        if ($this->skip() || !$this->ui->confirm($confirmationDefault)) {
             return $foldersWereRemoved;
         }
 
-        $errors = new Collection();
+        $errors = [];
         foreach ($foldersToRemove as $folderToRemove) {
             $relativeFolderPath = $folderToRemove->getRelativePathname();
 
@@ -308,7 +308,7 @@ REGEX;
                     )
                 );
             } catch (\Exception $e) {
-                $this->logError(
+                $this->ui->logError(
                     sprintf(
                         '%s* <error>The folder %s could not be removed.</error>',
                         $this->ui->indent(2),
@@ -318,7 +318,7 @@ REGEX;
                 );
             }
         }
-        $this->displayErrors($errors, 'the removal of folders', 'info', 1);
+        $this->ui->displayErrors($errors, 'the removal of folders', 'info', 1);
 
         return $foldersWereRemoved;
     }
@@ -368,13 +368,13 @@ REGEX;
         );
 
         $this->ui->write($this->ui->indent());
-        if ($this->shouldStopExecution()) {
+        if ($this->skip() || !$this->ui->confirm()) {
             $this->ui->writeln(PHP_EOL.'<info>Done.</info>'.PHP_EOL);
 
             return;
         }
 
-        $errors = new Collection();
+        $errors = [];
         foreach ($downloads as $download) {
             $this->ui->write(
                 sprintf(
@@ -403,7 +403,7 @@ REGEX;
                     | YoutubeDlException\VideoRemovedByUserException
                     | YoutubeDlException\VideoUnavailableException
                 $e) {
-                    $this->logError($e->getMessage(), $errors);
+                    $this->ui->logError($e->getMessage(), $errors);
                     break;
 
                 // These are (supposedly) connection/download errors, so we try again
@@ -412,13 +412,13 @@ REGEX;
 
                     // Maximum number of attempts reached, move along...
                     if ($attempt === $nbAttempts) {
-                        $this->logError($e->getMessage(), $errors);
+                        $this->ui->logError($e->getMessage(), $errors);
                         break;
                     }
                 }
             }
         }
-        $this->displayErrors($errors, 'download of files', 'error', 1);
+        $this->ui->displayErrors($errors, 'download of files', 'error', 1);
 
         $this->ui->writeln(PHP_EOL.'<info>Done.</info>'.PHP_EOL);
     }
@@ -466,60 +466,16 @@ REGEX;
     }
 
     /**
-     * @param bool $confirmationDefault
-     *
      * @return bool
      */
-    private function shouldStopExecution($confirmationDefault = true): bool
+    private function skip(): bool
     {
-        // Two reasons to move along: dry-run and declined confirmation.
         if ($this->dryRun) {
             $this->ui->writeln('<info>[DRY-RUN]</info> Not doing anything...'.PHP_EOL);
 
             return true;
         }
 
-        $confirmationQuestion = '<question>Continue?</question> ('.($confirmationDefault ? 'Y/n' : 'y/N').') ';
-        if (!$this->ui->askConfirmation($confirmationQuestion, $confirmationDefault)) {
-            $this->ui->writeln(PHP_EOL.$this->ui->indent().'Not doing anything...');
-
-            return true;
-        }
-
         return false;
-    }
-
-    /**
-     * @param string $error
-     * @param \App\Domain\Collection $errors
-     */
-    public function logError(string $error, Collection $errors): void
-    {
-        $this->ui->writeln('<error>An error occurred.</error>');
-        $errors->add($error);
-    }
-
-    /**
-     * @param \App\Domain\Collection $errors
-     * @param string $process
-     * @param string $type
-     * @param int $indentation
-     */
-    public function displayErrors(
-        Collection $errors,
-        string $process,
-        string $type = 'error',
-        int $indentation = 0
-    ): void {
-        $nbErrors = $errors->count();
-        if ($nbErrors > 0) {
-            $this->ui->forceOutput(function () use ($nbErrors, $errors, $process, $type, $indentation) {
-                $this->ui->writeln(
-                    PHP_EOL.PHP_EOL.'<'.$type.'>There were '.$nbErrors.' errors during the '.$process.' :</'.$type.'>'
-                );
-
-                $this->ui->listing($errors->toArray(), $indentation);
-            });
-        }
     }
 }
