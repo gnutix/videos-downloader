@@ -5,13 +5,7 @@ download them locally into multiple formats (mp3, mp4).
 
 ## Requirements
 
-1. Install youtube-dl python package :
-
-```
-sudo curl -L https://yt-dl.org/downloads/latest/youtube-dl -o /usr/local/bin/youtube-dl
-sudo chmod a+rx /usr/local/bin/youtube-dl
-```
-
+1. Install youtube-dl python package : https://github.com/rg3/youtube-dl#installation
 2. Install the vendors :
 
 `composer install`
