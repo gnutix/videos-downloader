@@ -169,16 +169,11 @@ REGEX;
                 ->directories()
                 ->in((string) $downloadPath)
                 ->sort(function (\SplFileInfo $fileInfoA, \SplFileInfo $fileInfoB) {
-                    // Sort the result by depth
+                    // Sort the result by folder depth
                     $a = substr_count($fileInfoA->getRealPath(), DIRECTORY_SEPARATOR);
                     $b = substr_count($fileInfoB->getRealPath(), DIRECTORY_SEPARATOR);
 
-                    // See http://php.net/manual/en/function.usort.php#example-5942
-                    if ($a === $b) {
-                        return 0;
-                    }
-
-                    return ($a < $b) ? -1 : 1;
+                    return $a <=> $b;
                 });
 
             foreach ($allFolders->getIterator() as $folder) {
@@ -212,7 +207,7 @@ REGEX;
         \SplFileInfo $folderToSearchFor,
         Collection $folders,
         bool $loopOverParentsFolders = false,
-        Path $untilPath = null
+        ?Path $untilPath = null
     ): bool {
         foreach ($folders as $folder) {
             do {

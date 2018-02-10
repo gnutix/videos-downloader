@@ -27,7 +27,7 @@ final class Kernel
      * @throws \RuntimeException
      * @throws \Symfony\Component\Yaml\Exception\ParseException
      */
-    public function __construct(bool $dryRun = false, UserInterface $ui = null)
+    public function __construct(bool $dryRun = false, ?UserInterface $ui)
     {
         $this->dryRun = $dryRun;
         $this->ui = $ui ?: new NullUserInterface();
