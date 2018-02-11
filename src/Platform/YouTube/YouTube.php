@@ -66,7 +66,7 @@ REGEX;
         $downloads = $this->filterAlreadyDownloaded($downloads);
 
         if ($this->shouldDownload($downloads, $downloadPath)) {
-            $this->download($downloads);
+            $this->download($downloads, $downloadPath);
         }
     }
 
@@ -157,10 +157,11 @@ REGEX;
 
     /**
      * @param \App\Platform\YouTube\Download[]|\App\Domain\Collection $downloads
+     * @param \App\Domain\Path $downloadPath
      *
      * @throws \RuntimeException
      */
-    private function download(Collection $downloads)
+    private function download(Collection $downloads, Path $downloadPath)
     {
         $errors = [];
         foreach ($downloads as $download) {
@@ -171,7 +172,7 @@ REGEX;
                     $download->getVideoId(),
                     $download->getFileType(),
                     $download->getFileExtension(),
-                    $download->getPath()
+                    str_replace((string) $downloadPath.DIRECTORY_SEPARATOR, '', $download->getPath())
                 )
             );
 

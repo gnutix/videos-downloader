@@ -16,6 +16,26 @@ trait FilesystemManager
     private $options;
 
     /**
+     * @param \App\Domain\Path $downloadPath
+     *
+     * @return \Symfony\Component\Finder\Finder
+     */
+    private function getAllDownloadsFolderFinder(Path $downloadPath): Finder
+    {
+        /** @noinspection ExceptionsAnnotatingAndHandlingInspection */
+        return (new Finder())
+            ->directories()
+            ->in((string) $downloadPath)
+            ->sort(function (\SplFileInfo $fileInfoA, \SplFileInfo $fileInfoB) {
+                // Sort the result by folder depth
+                $a = substr_count($fileInfoA->getRealPath(), DIRECTORY_SEPARATOR);
+                $b = substr_count($fileInfoB->getRealPath(), DIRECTORY_SEPARATOR);
+
+                return $a <=> $b;
+            });
+    }
+
+    /**
      * @param \App\Platform\YouTube\Download $download
      *
      * @return \Symfony\Component\Finder\Finder|\SplFileInfo[]
@@ -66,34 +86,11 @@ trait FilesystemManager
             )
         );
 
-        $completedDownloadsFolders = new Collection();
-        foreach ($downloads as $download) {
-            try {
-                foreach ($this->getDownloadFolderFinder($download) as $downloadFolder) {
-                    $parentFolder = $downloadFolder->getPathInfo();
-
-                    // Using a key ensures there's no duplicates
-                    $completedDownloadsFolders->set($parentFolder->getRealPath(), $parentFolder);
-                }
-            } catch (\InvalidArgumentException $e) {
-            }
-        }
-
-        /** @var \SplFileInfo[]|\App\Domain\Collection $foldersToRemove */
         $foldersToRemove = new Collection();
         try {
-            $allFolders = (new Finder())
-                ->directories()
-                ->in((string) $downloadPath)
-                ->sort(function (\SplFileInfo $fileInfoA, \SplFileInfo $fileInfoB) {
-                    // Sort the result by folder depth
-                    $a = substr_count($fileInfoA->getRealPath(), DIRECTORY_SEPARATOR);
-                    $b = substr_count($fileInfoB->getRealPath(), DIRECTORY_SEPARATOR);
+            $completedDownloadsFolders = $this->getCompletedDownloadsFolders($downloads);
 
-                    return $a <=> $b;
-                });
-
-            foreach ($allFolders->getIterator() as $folder) {
+            foreach ($this->getAllDownloadsFolderFinder($downloadPath)->getIterator() as $folder) {
                 if (!$this->isFolderInCollection($folder, $foldersToRemove, true, $downloadPath) &&
                     !$this->isFolderInCollection($folder, $completedDownloadsFolders)
                 ) {
@@ -160,6 +157,75 @@ trait FilesystemManager
      */
     private function removeFolders(Collection $foldersToRemove, Path $downloadPath): bool
     {
+        $foldersWereRemoved = false;
+
+        if (!$this->shouldRemoveFolders($foldersToRemove, $downloadPath)) {
+            return $foldersWereRemoved;
+        }
+
+        $errors = [];
+        foreach ($foldersToRemove as $folderToRemove) {
+            $relativeFolderPath = $folderToRemove->getRelativePathname();
+
+            try {
+                (new Filesystem())->remove($folderToRemove->getRealPath());
+
+                $foldersWereRemoved = true;
+
+                $this->ui->writeln(
+                    sprintf(
+                        '%s* The folder <info>%s</info> has been removed.',
+                        $this->ui->indent(2),
+                        $relativeFolderPath
+                    )
+                );
+            } catch (\Exception $e) {
+                $this->ui->logError(
+                    sprintf(
+                        '%s* <error>The folder %s could not be removed.</error>',
+                        $this->ui->indent(2),
+                        $relativeFolderPath
+                    ),
+                    $errors
+                );
+            }
+        }
+        $this->ui->displayErrors($errors, 'the removal of folders', 'info', 1);
+
+        return $foldersWereRemoved;
+    }
+
+    /**
+     * @param \App\Platform\YouTube\Download[]|\App\Domain\Collection $downloads
+     *
+     * @return \SplFileInfo[]|\App\Domain\Collection
+     */
+    private function getCompletedDownloadsFolders(Collection $downloads): Collection
+    {
+        $completedDownloadsFolders = new Collection();
+        foreach ($downloads as $download) {
+            try {
+                foreach ($this->getDownloadFolderFinder($download) as $downloadFolder) {
+                    $parentFolder = $downloadFolder->getPathInfo();
+
+                    // Using a key ensures there's no duplicates
+                    $completedDownloadsFolders->set($parentFolder->getRealPath(), $parentFolder);
+                }
+            } catch (\InvalidArgumentException $e) {
+            }
+        }
+
+        return $completedDownloadsFolders;
+    }
+
+    /**
+     * @param \SplFileInfo[]|\App\Domain\Collection $foldersToRemove
+     * @param \App\Domain\Path $downloadPath
+     *
+     * @return bool
+     */
+    private function shouldRemoveFolders(Collection $foldersToRemove, Path $downloadPath): bool
+    {
         $nbFoldersToRemove = $foldersToRemove->count();
         if (empty($nbFoldersToRemove)) {
             return false;
@@ -202,42 +268,8 @@ trait FilesystemManager
             );
         }
 
-        $foldersWereRemoved = false;
-
         $this->ui->write($this->ui->indent());
-        if ($this->skip() || !$this->ui->confirm($confirmationDefault)) {
-            return $foldersWereRemoved;
-        }
 
-        $errors = [];
-        foreach ($foldersToRemove as $folderToRemove) {
-            $relativeFolderPath = $folderToRemove->getRelativePathname();
-
-            try {
-                (new Filesystem())->remove($folderToRemove->getRealPath());
-
-                $foldersWereRemoved = true;
-
-                $this->ui->writeln(
-                    sprintf(
-                        '%s* The folder <info>%s</info> has been removed.',
-                        $this->ui->indent(2),
-                        $relativeFolderPath
-                    )
-                );
-            } catch (\Exception $e) {
-                $this->ui->logError(
-                    sprintf(
-                        '%s* <error>The folder %s could not be removed.</error>',
-                        $this->ui->indent(2),
-                        $relativeFolderPath
-                    ),
-                    $errors
-                );
-            }
-        }
-        $this->ui->displayErrors($errors, 'the removal of folders', 'info', 1);
-
-        return $foldersWereRemoved;
+        return !($this->skip() || !$this->ui->confirm($confirmationDefault));
     }
 }
