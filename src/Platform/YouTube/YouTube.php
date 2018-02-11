@@ -28,7 +28,7 @@ REGEX;
     /** @var array */
     private $options;
 
-    /** @var string */
+    /** @var bool */
     private $dryRun;
 
     /**
@@ -184,6 +184,7 @@ REGEX;
                 }
             }
         } catch (\LogicException $e) {
+            // Here we know that the download folder will exist.
         }
 
         $hasRemovedFolders = $this->removeFolders($foldersToRemove, $downloadPath);
@@ -346,6 +347,7 @@ REGEX;
                         $shouldBeDownloaded = false;
                     }
                 } catch (\InvalidArgumentException $e) {
+                    // Here we know that the download folder will exist.
                 }
 
                 return $shouldBeDownloaded;

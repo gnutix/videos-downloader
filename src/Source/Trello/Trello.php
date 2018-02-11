@@ -19,9 +19,6 @@ final class Trello implements Source
     /** @var array */
     private $options;
 
-    /** @var \App\Source\Trello\PhpDoc\TrelloClient */
-    private $client;
-
     /**
      * {@inheritdoc}
      */
@@ -29,7 +26,6 @@ final class Trello implements Source
     {
         $this->ui = $ui;
         $this->options = $options;
-        $this->client = new Client(['token' => $options['api_key']]);
     }
 
     /**
@@ -41,8 +37,10 @@ final class Trello implements Source
         $contents = new Collection();
 
         try {
-            $trelloLists = $this->client->getBoardLists($this->options['board_id']);
-            $trelloCards = $this->client->getBoardCards($this->options['board_id']);
+            /** @var \App\Source\Trello\PhpDoc\TrelloClient $client */
+            $client = new Client(['token' => $this->options['api_key']]);
+            $trelloLists = $client->getBoardLists($this->options['board_id']);
+            $trelloCards = $client->getBoardCards($this->options['board_id']);
         } catch (Exception $e) {
             $this->ui->writeln(
                 sprintf(

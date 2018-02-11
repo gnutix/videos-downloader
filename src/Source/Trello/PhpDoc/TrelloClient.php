@@ -2,7 +2,9 @@
 
 namespace App\Source\Trello\PhpDoc;
 
-interface TrelloClient
+use Stevenmaguire\Services\Trello\Client;
+
+abstract class TrelloClient extends Client
 {
     /**
      * @param string $boardId
@@ -10,7 +12,7 @@ interface TrelloClient
      * @return TrelloList[]
      * @throws \Stevenmaguire\Services\Trello\Exceptions\Exception
      */
-    public function getBoardLists(string $boardId): array;
+    abstract public function getBoardLists(string $boardId): array;
 
     /**
      * @param string $boardId
@@ -18,5 +20,5 @@ interface TrelloClient
      * @return TrelloCard[]
      * @throws \Stevenmaguire\Services\Trello\Exceptions\Exception
      */
-    public function getBoardCards(string $boardId): array;
+    abstract public function getBoardCards(string $boardId): array;
 }

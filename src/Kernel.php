@@ -31,7 +31,7 @@ final class Kernel
     {
         $this->dryRun = $dryRun;
         $this->ui = $ui ?: new NullUserInterface();
-        $this->config = Yaml::parseFile($this->getProjectDir().DIRECTORY_SEPARATOR.'config/app.yml');
+        $this->config = (array) Yaml::parseFile($this->getProjectDir().DIRECTORY_SEPARATOR.'config/app.yml');
     }
 
     /**

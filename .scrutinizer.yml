@@ -1,6 +1,2 @@
 checks:
     php: true
-
-filter:
-    excluded_paths:
-        - vendor-patches/

@@ -6,6 +6,6 @@ namespace App\Source\Trello\PhpDoc;
  * @property string $id
  * @property string $name
  */
-interface TrelloList
+final class TrelloList
 {
 }

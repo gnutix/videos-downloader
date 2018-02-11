@@ -8,6 +8,6 @@ namespace App\Source\Trello\PhpDoc;
  * @property string $name
  * @property string $desc
  */
-interface TrelloCard
+final class TrelloCard
 {
 }
