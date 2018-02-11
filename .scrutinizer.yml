@@ -2,5 +2,8 @@ checks:
     php: true
 
 filter:
-    excluded_paths:
-        - vendor-patches/YoutubeDl/YoutubeDl.php
+    paths:
+        - src/
+
+    dependency_paths:
+        - vendor-patches/
