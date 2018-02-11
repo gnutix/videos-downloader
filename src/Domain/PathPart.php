@@ -10,7 +10,7 @@ final class PathPart
     /** @var int */
     private $priority;
 
-    /** @var array */
+    /** @var string[] */
     private $substitutions;
 
     /**

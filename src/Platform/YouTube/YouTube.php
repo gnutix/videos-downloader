@@ -2,14 +2,14 @@
 
 namespace App\Platform\YouTube;
 
-use App\Domain\Collection;
+use App\Domain\Collection\Contents;
 use App\Domain\Content;
-use App\Domain\Path;
+use App\Domain\Collection\Path;
 use App\Domain\PathPart;
 use App\Platform\Platform;
 use App\Platform\YouTube\Exception as YouTubeException;
-use App\UI\UserInterface;
 use Symfony\Component\Filesystem\Filesystem;
+use Symfony\Component\Finder\Finder;
 
 final class YouTube implements Platform
 {
@@ -23,23 +23,12 @@ REGEX;
     private const YOUTUBE_URL_PREFIX = 'https://www.youtube.com/watch?v=';
 
     /**
-     * @param UserInterface $ui
-     * @param array $options
-     * @param bool $dryRun
-     */
-    public function __construct(UserInterface $ui, array $options, bool $dryRun = false)
-    {
-        $this->ui = $ui;
-        $this->options = $options;
-        $this->dryRun = $dryRun;
-    }
-
-    /**
-     * @param \App\Domain\Content[]|\App\Domain\Collection $contents
+     * @param \App\Domain\Collection\Contents $contents
      * @param \App\Domain\PathPart $rootPathPart
+     *
      * @throws \RuntimeException
      */
-    public function synchronizeContents(Collection $contents, PathPart $rootPathPart): void
+    public function synchronizeContents(Contents $contents, PathPart $rootPathPart): void
     {
         if ($contents->isEmpty()) {
             return;
@@ -52,7 +41,7 @@ REGEX;
         (new Filesystem())->mkdir((string) $downloadPath);
 
         // Add the platform path part and get a collection of downloads
-        $downloads = new Collection();
+        $downloads = new Downloads();
         foreach ($contents as $content) {
             $content->getPath()->add($platformPathPart);
 
@@ -70,14 +59,87 @@ REGEX;
         }
     }
 
+    /** @noinspection LowerAccessLevelInspection */
+    /**
+     * @param \App\Domain\Collection\Path $downloadPath
+     *
+     * @return \Symfony\Component\Finder\Finder
+     */
+    protected function getAllDownloadsFolderFinder(Path $downloadPath): Finder
+    {
+        /** @noinspection ExceptionsAnnotatingAndHandlingInspection */
+        return (new Finder())
+            ->directories()
+            ->in((string) $downloadPath)
+            ->sort(function (\SplFileInfo $fileInfoA, \SplFileInfo $fileInfoB) {
+                // Sort the result by folder depth
+                $a = substr_count($fileInfoA->getRealPath(), DIRECTORY_SEPARATOR);
+                $b = substr_count($fileInfoB->getRealPath(), DIRECTORY_SEPARATOR);
+
+                return $a <=> $b;
+            });
+    }
+
+    /** @noinspection LowerAccessLevelInspection */
+    /**
+     * @param \App\Platform\YouTube\Download $download
+     *
+     * @return \Symfony\Component\Finder\Finder|\SplFileInfo[]
+     * @throws \InvalidArgumentException
+     */
+    protected function getDownloadFolderFinder(Download $download): Finder
+    {
+        $placeholders = [
+            '%video_id%' => $download->getVideoId(),
+            '%file_extension%' => $download->getFileExtension(),
+        ];
+
+        $downloadPathPart = new PathPart([
+            'path' => (string) $download->getPath(),
+            'priority' => 0,
+        ]);
+        $folderPathPart = new PathPart([
+            'path' => $this->options['patterns']['folder'],
+            'priority' => 1,
+            'substitutions' => $placeholders,
+        ]);
+
+        return (new Finder())
+            ->files()
+            ->depth('== 0')
+            ->in((string) new Path([$downloadPathPart, $folderPathPart]))
+            ->name(
+                str_replace(
+                    array_keys($placeholders),
+                    array_values($placeholders),
+                    $this->options['patterns']['filename']
+                )
+            );
+    }
+
+    /** @noinspection LowerAccessLevelInspection */
+    /**
+     * @return bool
+     */
+    protected function skip(): bool
+    {
+        if ($this->ui->isDryRun()) {
+            $this->ui->writeln('<info>[DRY-RUN]</info> Not doing anything...'.PHP_EOL);
+
+            return true;
+        }
+
+        return false;
+    }
+
     /**
      * @param \App\Domain\Content $content
      *
-     * @return \App\Platform\YouTube\Download[]|\App\Domain\Collection
+     * @return \App\Platform\YouTube\Downloads
      */
-    private function extractDownloads(Content $content): Collection
+    private function extractDownloads(Content $content): Downloads
     {
-        $downloads = new Collection();
+        $downloads = new Downloads();
 
         if (preg_match_all(static::YOUTUBE_URL_REGEX, $content->getData(), $youtubeUrls)) {
             foreach ((array) $youtubeUrls[static::YOUTUBE_URL_REGEX_MATCHES_ID_INDEX] as $youtubeId) {
@@ -98,11 +160,11 @@ REGEX;
     }
 
     /**
-     * @param \App\Platform\YouTube\Download[]|\App\Domain\Collection $downloads
+     * @param \App\Platform\YouTube\Downloads $downloads
      *
-     * @return \App\Platform\YouTube\Download[]|\App\Domain\Collection
+     * @return \App\Platform\YouTube\Downloads
      */
-    private function filterAlreadyDownloaded(Collection $downloads): Collection
+    private function filterAlreadyDownloaded(Downloads $downloads): Downloads
     {
         return $downloads->filter(
             function (Download $download) {
@@ -121,12 +183,12 @@ REGEX;
     }
 
     /**
-     * @param \App\Platform\YouTube\Download[]|\App\Domain\Collection $downloads
-     * @param \App\Domain\Path $downloadPath
+     * @param \App\Platform\YouTube\Downloads $downloads
+     * @param \App\Domain\Collection\Path $downloadPath
      *
      * @return bool
      */
-    private function shouldDownload(Collection $downloads, Path $downloadPath): bool
+    private function shouldDownload(Downloads $downloads, Path $downloadPath): bool
     {
         $this->ui->writeln('Download files from YouTube... '.PHP_EOL);
 
@@ -147,7 +209,7 @@ REGEX;
 
         $this->ui->write($this->ui->indent());
         if ($this->skip() || !$this->ui->confirm()) {
-            $this->ui->writeln(PHP_EOL.'<info>Done.</info>'.PHP_EOL);
+            $this->ui->writeln(($this->ui->isDryRun() ? '' : PHP_EOL).'<info>Done.</info>'.PHP_EOL);
 
             return false;
         }
@@ -156,12 +218,12 @@ REGEX;
     }
 
     /**
-     * @param \App\Platform\YouTube\Download[]|\App\Domain\Collection $downloads
-     * @param \App\Domain\Path $downloadPath
+     * @param \App\Platform\YouTube\Downloads $downloads
+     * @param \App\Domain\Collection\Path $downloadPath
      *
      * @throws \RuntimeException
      */
-    private function download(Collection $downloads, Path $downloadPath)
+    private function download(Downloads $downloads, Path $downloadPath)
     {
         $errors = [];
         foreach ($downloads as $download) {

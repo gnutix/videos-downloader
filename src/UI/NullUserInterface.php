@@ -4,6 +4,33 @@ namespace App\UI;
 
 final class NullUserInterface implements UserInterface
 {
+    /** @var bool */
+    private $dryRun;
+
+    /**
+     * @param bool $dryRun
+     */
+    public function __construct(bool $dryRun)
+    {
+        $this->dryRun = $dryRun;
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function isInteractive(): bool
+    {
+        return false;
+    }
+
+    /**
+     * @return bool
+     */
+    public function isDryRun(): bool
+    {
+        return $this->dryRun;
+    }
+
     /**
      * {@inheritdoc}
      */

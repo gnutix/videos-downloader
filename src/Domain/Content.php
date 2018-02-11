@@ -2,17 +2,19 @@
 
 namespace App\Domain;
 
+use App\Domain\Collection\Path;
+
 final class Content
 {
     /** @var string */
     private $data;
 
-    /** @var \App\Domain\Path */
+    /** @var \App\Domain\Collection\Path */
     private $path;
 
     /**
      * @param string $data
-     * @param \App\Domain\Path $path
+     * @param \App\Domain\Collection\Path $path
      */
     public function __construct(string $data, Path $path)
     {
@@ -21,7 +23,7 @@ final class Content
     }
 
     /**
-     * @return \App\Domain\Path
+     * @return \App\Domain\Collection\Path
      */
     public function getPath(): Path
     {

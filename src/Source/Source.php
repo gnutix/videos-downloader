@@ -2,12 +2,12 @@
 
 namespace App\Source;
 
-use App\Domain\Collection;
+use App\Domain\Collection\Contents;
 
 interface Source
 {
     /**
-     * @return \App\Domain\Content[]|\App\Domain\Collection
+     * @return \App\Domain\Collection\Contents
      */
-    public function getContents(): Collection;
+    public function getContents(): Contents;
 }

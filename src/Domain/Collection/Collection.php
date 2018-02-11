@@ -1,9 +1,9 @@
 <?php declare(strict_types=1);
 
-namespace App\Domain;
+namespace App\Domain\Collection;
 
 use Doctrine\Common\Collections\ArrayCollection;
 
-class Collection extends ArrayCollection
+abstract class Collection extends ArrayCollection
 {
 }

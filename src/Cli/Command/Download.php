@@ -20,7 +20,7 @@ final class Download extends Command
     {
         /** @noinspection ExceptionsAnnotatingAndHandlingInspection */
         $this->setName(static::COMMAND_NAME)
-            ->addOption('dry-run', null, InputOption::VALUE_NONE, 'Execute the script as a dry run.');
+            ->addOption('dry-run', 'd', InputOption::VALUE_NONE, 'Execute the script as a dry run.');
     }
 
     /**
@@ -38,6 +38,6 @@ final class Download extends Command
             $input->setInteractive(false);
         }
 
-        (new Kernel($dryRun, new CommandLineInterface($this, $input, $output)))->boot();
+        (new Kernel(new CommandLineInterface($dryRun, $this, $input, $output)))->boot();
     }
 }

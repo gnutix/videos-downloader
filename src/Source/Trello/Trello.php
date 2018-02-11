@@ -2,9 +2,9 @@
 
 namespace App\Source\Trello;
 
-use App\Domain\Collection;
+use App\Domain\Collection\Contents;
 use App\Domain\Content;
-use App\Domain\Path;
+use App\Domain\Collection\Path;
 use App\Domain\PathPart;
 use App\Source\Source;
 use App\UI\UserInterface;
@@ -31,10 +31,10 @@ final class Trello implements Source
     /**
      * {@inheritdoc}
      */
-    public function getContents(): Collection
+    public function getContents(): Contents
     {
         $this->ui->write('Fetch the contents from Trello... ');
-        $contents = new Collection();
+        $contents = new Contents();
 
         try {
             /** @var \App\Source\Trello\PhpDoc\TrelloClient $client */

@@ -9,7 +9,7 @@ abstract class TrelloClient extends Client
     /**
      * @param string $boardId
      *
-     * @return TrelloList[]
+     * @return \App\Source\Trello\PhpDoc\TrelloList[]
      * @throws \Stevenmaguire\Services\Trello\Exceptions\Exception
      */
     abstract public function getBoardLists(string $boardId): array;
@@ -17,7 +17,7 @@ abstract class TrelloClient extends Client
     /**
      * @param string $boardId
      *
-     * @return TrelloCard[]
+     * @return \App\Source\Trello\PhpDoc\TrelloCard[]
      * @throws \Stevenmaguire\Services\Trello\Exceptions\Exception
      */
     abstract public function getBoardCards(string $boardId): array;

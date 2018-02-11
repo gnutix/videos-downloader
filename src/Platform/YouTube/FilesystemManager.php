@@ -2,38 +2,36 @@
 
 namespace App\Platform\YouTube;
 
-use App\Domain\Collection;
-use App\Domain\Path;
-use App\Domain\PathPart;
+use App\Domain\Collection\FilesystemObjects;
+use App\Domain\Collection\Path;
+use App\UI\UserInterface;
 use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\Finder\Finder;
 
 trait FilesystemManager
 {
-    use DryRunner;
+    /** @var \App\UI\UserInterface */
+    private $ui;
 
     /** @var array */
     private $options;
 
     /**
-     * @param \App\Domain\Path $downloadPath
+     * @param \App\UI\UserInterface $ui
+     * @param array $options
+     */
+    public function __construct(UserInterface $ui, array $options)
+    {
+        $this->ui = $ui;
+        $this->options = $options;
+    }
+
+    /**
+     * @param \App\Domain\Collection\Path $downloadPath
      *
      * @return \Symfony\Component\Finder\Finder
      */
-    private function getAllDownloadsFolderFinder(Path $downloadPath): Finder
-    {
-        /** @noinspection ExceptionsAnnotatingAndHandlingInspection */
-        return (new Finder())
-            ->directories()
-            ->in((string) $downloadPath)
-            ->sort(function (\SplFileInfo $fileInfoA, \SplFileInfo $fileInfoB) {
-                // Sort the result by folder depth
-                $a = substr_count($fileInfoA->getRealPath(), DIRECTORY_SEPARATOR);
-                $b = substr_count($fileInfoB->getRealPath(), DIRECTORY_SEPARATOR);
-
-                return $a <=> $b;
-            });
-    }
+    abstract protected function getAllDownloadsFolderFinder(Path $downloadPath): Finder;
 
     /**
      * @param \App\Platform\YouTube\Download $download
@@ -41,52 +39,38 @@ trait FilesystemManager
      * @return \Symfony\Component\Finder\Finder|\SplFileInfo[]
      * @throws \InvalidArgumentException
      */
-    private function getDownloadFolderFinder(Download $download): Finder
-    {
-        $placeholders = [
-            '%video_id%' => $download->getVideoId(),
-            '%file_extension%' => $download->getFileExtension(),
-        ];
+    abstract protected function getDownloadFolderFinder(Download $download): Finder;
 
-        $downloadPathPart = new PathPart([
-            'path' => (string) $download->getPath(),
-            'priority' => 0,
-        ]);
-        $folderPathPart = new PathPart([
-            'path' => $this->options['patterns']['folder'],
-            'priority' => 1,
-            'substitutions' => $placeholders,
-        ]);
-
-        return (new Finder())
-            ->files()
-            ->depth('== 0')
-            ->in((string) new Path([$downloadPathPart, $folderPathPart]))
-            ->name(
-                str_replace(
-                    array_keys($placeholders),
-                    array_values($placeholders),
-                    $this->options['patterns']['filename']
-                )
-            );
-    }
+    /**
+     * @return bool
+     */
+    abstract protected function skip(): bool;
 
     /**
      * {@inheritdoc}
-     * @param \App\Platform\YouTube\Download[]|\App\Domain\Collection $downloads
+     * @param \App\Platform\YouTube\Downloads $downloads
      *
      * @throws \RuntimeException
      */
-    private function cleanFilesystem(Collection $downloads, Path $downloadPath): void
+    private function cleanFilesystem(Downloads $downloads, Path $downloadPath): void
     {
-        $this->ui->write(
-            sprintf(
-                'Synchronize the <info>%s</info> folder with the downloaded contents... ',
-                (string) $downloadPath
-            )
-        );
+        $foldersToRemove = $this->getFoldersToRemove($downloads, $downloadPath);
 
-        $foldersToRemove = new Collection();
+        if ($this->shouldRemoveFolders($foldersToRemove, $downloadPath)) {
+            $this->removeFolders($foldersToRemove, $downloadPath);
+        }
+    }
+
+    /**
+     * @param \App\Platform\YouTube\Downloads $downloads
+     * @param \App\Domain\Collection\Path $downloadPath
+     *
+     * @return \App\Domain\Collection\FilesystemObjects
+     * @throws \RuntimeException
+     */
+    private function getFoldersToRemove(Downloads $downloads, Path $downloadPath): FilesystemObjects
+    {
+        $foldersToRemove = new FilesystemObjects();
         try {
             $completedDownloadsFolders = $this->getCompletedDownloadsFolders($downloads);
 
@@ -101,26 +85,23 @@ trait FilesystemManager
             // Here we know that the download folder will exist.
         }
 
-        $hasRemovedFolders = $this->removeFolders($foldersToRemove, $downloadPath);
-
-        $newLine = $hasRemovedFolders ? PHP_EOL : '';
-        $this->ui->writeln($newLine.'<info>Done.</info>'.$newLine);
+        return $foldersToRemove;
     }
 
     /**
      * Checks if a folder (or one of its parent, up to the $limit parameter) is found in the collection of folders.
      *
      * @param \SplFileInfo $folderToSearchFor
-     * @param \SplFileInfo[]|\App\Domain\Collection $folders
+     * @param \App\Domain\Collection\FilesystemObjects $folders
      * @param bool $loopOverParentsFolders
-     * @param Path $untilPath
+     * @param \App\Domain\Collection\Path $untilPath
      *
      * @return bool
      * @throws \RuntimeException
      */
     private function isFolderInCollection(
         \SplFileInfo $folderToSearchFor,
-        Collection $folders,
+        FilesystemObjects $folders,
         bool $loopOverParentsFolders = false,
         ?Path $untilPath = null
     ): bool {
@@ -150,27 +131,17 @@ trait FilesystemManager
     }
 
     /**
-     * @param \SplFileInfo[]|\App\Domain\Collection $foldersToRemove
-     * @param \App\Domain\Path $downloadPath
-     *
-     * @return bool Whether folders were removed or not.
+     * @param \App\Domain\Collection\FilesystemObjects $foldersToRemove
+     * @param \App\Domain\Collection\Path $downloadPath
      */
-    private function removeFolders(Collection $foldersToRemove, Path $downloadPath): bool
+    private function removeFolders(FilesystemObjects $foldersToRemove, Path $downloadPath): void
     {
-        $foldersWereRemoved = false;
-
-        if (!$this->shouldRemoveFolders($foldersToRemove, $downloadPath)) {
-            return $foldersWereRemoved;
-        }
-
         $errors = [];
         foreach ($foldersToRemove as $folderToRemove) {
             $relativeFolderPath = $folderToRemove->getRelativePathname();
 
             try {
                 (new Filesystem())->remove($folderToRemove->getRealPath());
-
-                $foldersWereRemoved = true;
 
                 $this->ui->writeln(
                     sprintf(
@@ -192,24 +163,21 @@ trait FilesystemManager
         }
         $this->ui->displayErrors($errors, 'the removal of folders', 'info', 1);
 
-        return $foldersWereRemoved;
+        $this->ui->writeln(PHP_EOL.'<info>Done.</info>'.PHP_EOL);
     }
 
     /**
-     * @param \App\Platform\YouTube\Download[]|\App\Domain\Collection $downloads
+     * @param \App\Platform\YouTube\Downloads $downloads
      *
-     * @return \SplFileInfo[]|\App\Domain\Collection
+     * @return \App\Domain\Collection\FilesystemObjects
      */
-    private function getCompletedDownloadsFolders(Collection $downloads): Collection
+    private function getCompletedDownloadsFolders(Downloads $downloads): FilesystemObjects
     {
-        $completedDownloadsFolders = new Collection();
+        $completedDownloadsFolders = new FilesystemObjects();
         foreach ($downloads as $download) {
             try {
                 foreach ($this->getDownloadFolderFinder($download) as $downloadFolder) {
-                    $parentFolder = $downloadFolder->getPathInfo();
-
-                    // Using a key ensures there's no duplicates
-                    $completedDownloadsFolders->set($parentFolder->getRealPath(), $parentFolder);
+                    $completedDownloadsFolders->add($downloadFolder->getPathInfo());
                 }
             } catch (\InvalidArgumentException $e) {
             }
@@ -219,23 +187,36 @@ trait FilesystemManager
     }
 
     /**
-     * @param \SplFileInfo[]|\App\Domain\Collection $foldersToRemove
-     * @param \App\Domain\Path $downloadPath
+     * @param \App\Domain\Collection\FilesystemObjects $foldersToRemove
+     * @param \App\Domain\Collection\Path $downloadPath
      *
      * @return bool
      */
-    private function shouldRemoveFolders(Collection $foldersToRemove, Path $downloadPath): bool
+    private function shouldRemoveFolders(FilesystemObjects $foldersToRemove, Path $downloadPath): bool
     {
-        $nbFoldersToRemove = $foldersToRemove->count();
-        if (empty($nbFoldersToRemove)) {
+        $this->ui->write(
+            sprintf(
+                'Synchronize the <info>%s</info> folder with the downloaded contents... ',
+                (string) $downloadPath
+            )
+        );
+
+        if ($foldersToRemove->isEmpty()) {
+            $this->ui->writeln('<info>Done.</info>');
+
             return false;
         }
 
         $this->ui->writeln(PHP_EOL);
 
+        if (!$this->ui->isDryRun() && !$this->ui->isInteractive()) {
+            return true;
+        }
+
         $confirmationDefault = true;
 
         // If there's less than 10 folders, we can display them
+        $nbFoldersToRemove = $foldersToRemove->count();
         if ($nbFoldersToRemove <= 10) {
             $this->ui->writeln(
                 sprintf(
@@ -270,6 +251,12 @@ trait FilesystemManager
 
         $this->ui->write($this->ui->indent());
 
-        return !($this->skip() || !$this->ui->confirm($confirmationDefault));
+        if ($this->skip() || !$this->ui->confirm($confirmationDefault)) {
+            $this->ui->writeln(($this->ui->isDryRun() ? '' : PHP_EOL).'<info>Done.</info>'.PHP_EOL);
+
+            return false;
+        }
+
+        return true;
     }
 }

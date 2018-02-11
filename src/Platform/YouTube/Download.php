@@ -2,11 +2,11 @@
 
 namespace App\Platform\YouTube;
 
-use App\Domain\Path;
+use App\Domain\Collection\Path;
 
 final class Download
 {
-    /** @var \App\Domain\Path */
+    /** @var \App\Domain\Collection\Path */
     private $path;
 
     /** @var string */
@@ -19,7 +19,7 @@ final class Download
     private $fileExtension;
 
     /**
-     * @param \App\Domain\Path $path
+     * @param \App\Domain\Collection\Path $path
      * @param string $videoId
      * @param string $fileType
      * @param string $fileExtension
@@ -45,7 +45,7 @@ final class Download
     }
 
     /**
-     * @return \App\Domain\Path
+     * @return \App\Domain\Collection\Path
      */
     public function getPath(): Path
     {

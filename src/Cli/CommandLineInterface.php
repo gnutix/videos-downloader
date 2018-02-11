@@ -10,25 +10,46 @@ use Symfony\Component\Console\Question\ConfirmationQuestion;
 
 final class CommandLineInterface implements UserInterface
 {
-    /** @var Command */
+    /** @var bool */
+    private $dryRun;
+
+    /** @var \Symfony\Component\Console\Command\Command */
     private $command;
 
-    /** @var InputInterface */
+    /** @var \Symfony\Component\Console\Input\InputInterface */
     private $input;
 
-    /** @var OutputInterface */
+    /** @var \Symfony\Component\Console\Output\OutputInterface */
     private $output;
 
     /**
-     * @param Command $command
-     * @param InputInterface $input
-     * @param OutputInterface $output
+     * @param bool $dryRun
+     * @param \Symfony\Component\Console\Command\Command $command
+     * @param \Symfony\Component\Console\Input\InputInterface $input
+     * @param \Symfony\Component\Console\Output\OutputInterface $output
      */
-    public function __construct(Command $command, InputInterface $input, OutputInterface $output)
+    public function __construct(bool $dryRun, Command $command, InputInterface $input, OutputInterface $output)
     {
+        $this->dryRun = $dryRun;
         $this->command = $command;
         $this->input = $input;
         $this->output = $output;
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function isInteractive(): bool
+    {
+        return $this->input->isInteractive();
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function isDryRun(): bool
+    {
+        return $this->dryRun;
     }
 
     /**
