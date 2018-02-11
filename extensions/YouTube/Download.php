@@ -1,10 +1,11 @@
 <?php declare(strict_types=1);
 
-namespace App\Platform\YouTube;
+namespace Extension\YouTube;
 
 use App\Domain\Collection\Path;
+use App\Domain\Download as DownloadInterface;
 
-final class Download
+final class Download implements DownloadInterface
 {
     /** @var \App\Domain\Collection\Path */
     private $path;

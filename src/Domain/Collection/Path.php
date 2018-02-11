@@ -8,18 +8,24 @@ use Doctrine\Common\Collections\Criteria;
 /**
  * This is a Collection of PathPart, which we can name a "Path" (beware: it is not a Collection of "Paths").
  *
+ * @method static __construct(PathPart[] $elements)
+ * @method PathPart[] toArray()
  * @method PathPart first()
  * @method PathPart last()
  * @method PathPart next()
  * @method PathPart current()
- * @method PathPart get($key)
- * @method PathPart[] toArray()
+ * @method bool removeElement(PathPart $element)
+ * @method bool contains(PathPart $element)
+ * @method mixed indexOf(PathPart $element)
  * @method PathPart[] getValues()
+ * @method void set($key, PathPart $element)
+ * @method bool add(PathPart $element)
+ * @method \ArrayIterator|PathPart[] getIterator()
  * @method PathPart[]|Path map(\Closure $p)
  * @method PathPart[]|Path filter(\Closure $p)
+ * @method Path[] partition(\Closure $p)
  * @method PathPart[]|Path slice($offset, $length = null)
  * @method PathPart[]|Path matching(Criteria $criteria)
- * @method Path[] partition(\Closure $p)
  */
 final class Path extends Collection
 {

@@ -1,11 +1,11 @@
 <?php declare(strict_types=1);
 
-namespace App\Source\Trello\PhpDoc;
+namespace Extension\Trello\PhpDoc;
 
 /**
  * @property string $id
  * @property string $name
  */
-final class TrelloList
+abstract class TrelloList
 {
 }

@@ -10,54 +10,40 @@ use Symfony\Component\Yaml\Yaml;
 
 final class Kernel
 {
-    /** @var \App\UI\UserInterface */
-    private $ui;
-
-    /** @var array */
-    private $config;
-
     /**
      * @param \App\UI\UserInterface $ui
      *
      * @throws \RuntimeException
+     * @throws \Symfony\Component\Filesystem\Exception\IOException
      * @throws \Symfony\Component\Yaml\Exception\ParseException
      */
-    public function __construct(UserInterface $ui)
+    public function __invoke(UserInterface $ui): void
     {
-        $this->ui = $ui;
-        $this->config = (array) Yaml::parseFile($this->getProjectDir().DIRECTORY_SEPARATOR.'config/app.yml');
-    }
+        $config = (array) Yaml::parseFile($this->getProjectDir().DIRECTORY_SEPARATOR.'config/app.yml');
+        $rootPathPart = $this->getRootPathPart($config['path_part']);
 
-    /**
-     * @throws \RuntimeException
-     * @throws \Symfony\Component\Filesystem\Exception\IOException
-     */
-    public function boot(): void
-    {
-        $rootPathPart = $this->getRootPathPart();
+        foreach ((array) $config['sources'] as $sources) {
+            foreach ((array) $sources as $sourceClassName => $sourceData) {
 
-        // Loop over the different sources
-        foreach ((array) $this->config['app']['sources'] as $sourceId) {
-            $sourceConfig = $this->config['sources'][$sourceId];
+                /** @var \App\Domain\Source $source */
+                $source = new $sourceClassName($ui, $sourceData['config'] ?? []);
 
-            /** @var \App\Source\Source $source */
-            $source = new $sourceConfig['class_name']($this->ui, $sourceConfig);
+                // Add the root path part to the contents' path
+                $contents = $source->getContents()
+                    ->map(function (Content $content) use ($rootPathPart) {
+                        $content->getPath()->add($rootPathPart);
 
-            // Add the root path part
-            $contents = $source->getContents()
-                ->map(function(Content $content) use ($rootPathPart) {
-                    $content->getPath()->add($rootPathPart);
+                        return $content;
+                    });
 
-                    return $content;
-                });
+                foreach ((array) $sourceData['platforms'] as $platforms) {
+                    foreach ((array) $platforms as $platformClassName => $platformConfig) {
 
-            // Loop over the different platforms
-            foreach ((array) $this->config['app']['platforms'] as $platformId) {
-                $platformConfig = $this->config['platforms'][$platformId];
-
-                /** @var \App\Platform\Platform $platform */
-                $platform = new $platformConfig['class_name']($this->ui, $platformConfig);
-                $platform->synchronizeContents($contents, $rootPathPart);
+                        /** @var \App\Domain\Platform $platform */
+                        $platform = new $platformClassName($ui, $platformConfig ?? []);
+                        $platform->synchronizeContents($contents, $rootPathPart);
+                    }
+                }
             }
         }
     }
@@ -77,18 +63,19 @@ final class Kernel
     }
 
     /**
+     * @param array $config
+     *
      * @return \App\Domain\PathPart
      *
      * @throws \RuntimeException
      * @throws \Symfony\Component\Filesystem\Exception\IOException
      */
-    private function getRootPathPart(): PathPart
+    private function getRootPathPart(array $config): PathPart
     {
-        $pathPartConfig = $this->config['app']['path_part'];
-        $pathPartConfig['substitutions'] = [
+        $config['substitutions'] = [
                 '%project_root%' => $this->getProjectDir()
-            ] + ($pathPartConfig['substitutions'] ?? []);
-        $rootPathPart = new PathPart($pathPartConfig);
+            ] + ($config['substitutions'] ?? []);
+        $rootPathPart = new PathPart($config);
 
         // Try to create the root directory... 'cause if it fails, nothing will work.
         (new Filesystem())->mkdir($rootPathPart->getPath());

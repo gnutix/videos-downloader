@@ -1,26 +1,47 @@
 <?php declare(strict_types=1);
 
-namespace App\Platform\YouTube;
+namespace Extension\YouTube;
 
 use App\Domain\Collection\Contents;
 use App\Domain\Content;
 use App\Domain\Collection\Path;
+use App\Domain\Download as DownloadInterface;
 use App\Domain\PathPart;
-use App\Platform\Platform;
-use App\Platform\YouTube\Exception as YouTubeException;
+use App\Filesystem\FilesystemManager;
+use App\Domain\Platform;
+use Symfony\Component\Yaml\Yaml;
+use Extension\YouTube\Exception as YouTubeException;
+use App\UI\UserInterface;
 use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\Finder\Finder;
 
-final class YouTube implements Platform
+final class YouTube extends FilesystemManager implements Platform
 {
-    use FilesystemManager;
-
     // See https://stackoverflow.com/a/37704433/389519
     private const YOUTUBE_URL_REGEX = <<<REGEX
 /\b((?:https?:)?\/\/)?((?:www|m)\.)?((?:youtube\.com|youtu.be))(\/(?:[\w\-]+\?v=|embed\/|v\/)?)([\w\-]+)(\S+)?/i
 REGEX;
     private const YOUTUBE_URL_REGEX_MATCHES_ID_INDEX = 5;
     private const YOUTUBE_URL_PREFIX = 'https://www.youtube.com/watch?v=';
+
+    /** @var array */
+    private $options;
+
+    /**
+     * @param \App\UI\UserInterface $ui
+     * @param array $config
+     *
+     * @throws \Symfony\Component\Yaml\Exception\ParseException
+     */
+    public function __construct(UserInterface $ui, array $config = [])
+    {
+        parent::__construct($ui);
+
+        $this->options = array_merge(
+            (array) Yaml::parseFile(__DIR__.DIRECTORY_SEPARATOR.'config/config.yml'),
+            $config
+        );
+    }
 
     /**
      * @param \App\Domain\Collection\Contents $contents
@@ -82,12 +103,10 @@ REGEX;
 
     /** @noinspection LowerAccessLevelInspection */
     /**
-     * @param \App\Platform\YouTube\Download $download
-     *
-     * @return \Symfony\Component\Finder\Finder|\SplFileInfo[]
-     * @throws \InvalidArgumentException
+     * {@inheritdoc}
+     * @param \Extension\YouTube\Download $download
      */
-    protected function getDownloadFolderFinder(Download $download): Finder
+    protected function getDownloadFolderFinder(DownloadInterface $download): Finder
     {
         $placeholders = [
             '%video_id%' => $download->getVideoId(),
@@ -117,25 +136,10 @@ REGEX;
             );
     }
 
-    /** @noinspection LowerAccessLevelInspection */
-    /**
-     * @return bool
-     */
-    protected function skip(): bool
-    {
-        if ($this->ui->isDryRun()) {
-            $this->ui->writeln('<info>[DRY-RUN]</info> Not doing anything...'.PHP_EOL);
-
-            return true;
-        }
-
-        return false;
-    }
-
     /**
      * @param \App\Domain\Content $content
      *
-     * @return \App\Platform\YouTube\Downloads
+     * @return \Extension\YouTube\Downloads
      */
     private function extractDownloads(Content $content): Downloads
     {
@@ -160,9 +164,9 @@ REGEX;
     }
 
     /**
-     * @param \App\Platform\YouTube\Downloads $downloads
+     * @param \Extension\YouTube\Downloads $downloads
      *
-     * @return \App\Platform\YouTube\Downloads
+     * @return \Extension\YouTube\Downloads
      */
     private function filterAlreadyDownloaded(Downloads $downloads): Downloads
     {
@@ -183,7 +187,7 @@ REGEX;
     }
 
     /**
-     * @param \App\Platform\YouTube\Downloads $downloads
+     * @param \Extension\YouTube\Downloads $downloads
      * @param \App\Domain\Collection\Path $downloadPath
      *
      * @return bool
@@ -218,7 +222,7 @@ REGEX;
     }
 
     /**
-     * @param \App\Platform\YouTube\Downloads $downloads
+     * @param \Extension\YouTube\Downloads $downloads
      * @param \App\Domain\Collection\Path $downloadPath
      *
      * @throws \RuntimeException
@@ -275,7 +279,7 @@ REGEX;
     }
 
     /**
-     * @param \App\Platform\YouTube\Download $download
+     * @param \Extension\YouTube\Download $download
      * @param array $downloadOptions
      *
      * @throws \Exception

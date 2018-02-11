@@ -38,6 +38,6 @@ final class Download extends Command
             $input->setInteractive(false);
         }
 
-        (new Kernel(new CommandLineInterface($dryRun, $this, $input, $output)))->boot();
+        (new Kernel)(new CommandLineInterface($dryRun, $this, $input, $output));
     }
 }

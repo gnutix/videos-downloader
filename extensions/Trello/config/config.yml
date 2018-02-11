@@ -1,0 +1,13 @@
+---
+# can be fetched from: https://trello.com/app-key
+api_key: beb1cf49bfceca0ea4f7dc063fe54f37
+
+# full URL would be: https://trello.com/b/MkYHGxzY/
+board_id: MkYHGxzY
+
+path_part:
+    # available variables: %list_name%, %card_name%
+    path: '%list_name%/%card_name%'
+    priority: 50
+    substitutions:
+        ' - ': '/'

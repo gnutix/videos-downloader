@@ -1,7 +1,8 @@
 <?php declare(strict_types=1);
 
-namespace App\Domain\Collection;
+namespace App\Filesystem;
 
+use App\Domain\Collection\Collection;
 use Doctrine\Common\Collections\Criteria;
 
 /**

@@ -1,29 +1,25 @@
 <?php declare(strict_types=1);
 
-namespace App\Platform\YouTube;
+namespace App\Filesystem;
 
-use App\Domain\Collection\FilesystemObjects;
+use App\Domain\Collection\Downloads;
 use App\Domain\Collection\Path;
+use App\Domain\Download;
 use App\UI\UserInterface;
 use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\Finder\Finder;
 
-trait FilesystemManager
+abstract class FilesystemManager
 {
     /** @var \App\UI\UserInterface */
-    private $ui;
-
-    /** @var array */
-    private $options;
+    protected $ui;
 
     /**
      * @param \App\UI\UserInterface $ui
-     * @param array $options
      */
-    public function __construct(UserInterface $ui, array $options)
+    public function __construct(UserInterface $ui)
     {
         $this->ui = $ui;
-        $this->options = $options;
     }
 
     /**
@@ -34,7 +30,7 @@ trait FilesystemManager
     abstract protected function getAllDownloadsFolderFinder(Path $downloadPath): Finder;
 
     /**
-     * @param \App\Platform\YouTube\Download $download
+     * @param \App\Domain\Download $download
      *
      * @return \Symfony\Component\Finder\Finder|\SplFileInfo[]
      * @throws \InvalidArgumentException
@@ -44,31 +40,40 @@ trait FilesystemManager
     /**
      * @return bool
      */
-    abstract protected function skip(): bool;
+    protected function skip(): bool
+    {
+        if ($this->ui->isDryRun()) {
+            $this->ui->writeln('<info>[DRY-RUN]</info> Not doing anything...'.PHP_EOL);
+
+            return true;
+        }
+
+        return false;
+    }
 
     /**
      * {@inheritdoc}
-     * @param \App\Platform\YouTube\Downloads $downloads
+     * @param \App\Domain\Collection\Downloads $downloads
      *
      * @throws \RuntimeException
      */
-    private function cleanFilesystem(Downloads $downloads, Path $downloadPath): void
+    protected function cleanFilesystem(Downloads $downloads, Path $downloadPath): void
     {
         $foldersToRemove = $this->getFoldersToRemove($downloads, $downloadPath);
 
         if ($this->shouldRemoveFolders($foldersToRemove, $downloadPath)) {
-            $this->removeFolders($foldersToRemove, $downloadPath);
+            $this->removeFolders($foldersToRemove);
         }
     }
 
     /**
-     * @param \App\Platform\YouTube\Downloads $downloads
+     * @param \App\Domain\Collection\Downloads $downloads
      * @param \App\Domain\Collection\Path $downloadPath
      *
-     * @return \App\Domain\Collection\FilesystemObjects
+     * @return \App\Filesystem\FilesystemObjects
      * @throws \RuntimeException
      */
-    private function getFoldersToRemove(Downloads $downloads, Path $downloadPath): FilesystemObjects
+    protected function getFoldersToRemove(Downloads $downloads, Path $downloadPath): FilesystemObjects
     {
         $foldersToRemove = new FilesystemObjects();
         try {
@@ -92,14 +97,14 @@ trait FilesystemManager
      * Checks if a folder (or one of its parent, up to the $limit parameter) is found in the collection of folders.
      *
      * @param \SplFileInfo $folderToSearchFor
-     * @param \App\Domain\Collection\FilesystemObjects $folders
+     * @param \App\Filesystem\FilesystemObjects $folders
      * @param bool $loopOverParentsFolders
      * @param \App\Domain\Collection\Path $untilPath
      *
      * @return bool
      * @throws \RuntimeException
      */
-    private function isFolderInCollection(
+    protected function isFolderInCollection(
         \SplFileInfo $folderToSearchFor,
         FilesystemObjects $folders,
         bool $loopOverParentsFolders = false,
@@ -131,10 +136,9 @@ trait FilesystemManager
     }
 
     /**
-     * @param \App\Domain\Collection\FilesystemObjects $foldersToRemove
-     * @param \App\Domain\Collection\Path $downloadPath
+     * @param \App\Filesystem\FilesystemObjects $foldersToRemove
      */
-    private function removeFolders(FilesystemObjects $foldersToRemove, Path $downloadPath): void
+    protected function removeFolders(FilesystemObjects $foldersToRemove): void
     {
         $errors = [];
         foreach ($foldersToRemove as $folderToRemove) {
@@ -167,11 +171,11 @@ trait FilesystemManager
     }
 
     /**
-     * @param \App\Platform\YouTube\Downloads $downloads
+     * @param \App\Domain\Collection\Downloads $downloads
      *
-     * @return \App\Domain\Collection\FilesystemObjects
+     * @return \App\Filesystem\FilesystemObjects
      */
-    private function getCompletedDownloadsFolders(Downloads $downloads): FilesystemObjects
+    protected function getCompletedDownloadsFolders(Downloads $downloads): FilesystemObjects
     {
         $completedDownloadsFolders = new FilesystemObjects();
         foreach ($downloads as $download) {
@@ -187,12 +191,12 @@ trait FilesystemManager
     }
 
     /**
-     * @param \App\Domain\Collection\FilesystemObjects $foldersToRemove
+     * @param \App\Filesystem\FilesystemObjects $foldersToRemove
      * @param \App\Domain\Collection\Path $downloadPath
      *
      * @return bool
      */
-    private function shouldRemoveFolders(FilesystemObjects $foldersToRemove, Path $downloadPath): bool
+    protected function shouldRemoveFolders(FilesystemObjects $foldersToRemove, Path $downloadPath): bool
     {
         $this->ui->write(
             sprintf(

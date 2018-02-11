@@ -1,6 +1,6 @@
 <?php declare(strict_types=1);
 
-namespace App\Source\Trello\PhpDoc;
+namespace Extension\Trello\PhpDoc;
 
 /**
  * @property string $idBoard
@@ -8,6 +8,6 @@ namespace App\Source\Trello\PhpDoc;
  * @property string $name
  * @property string $desc
  */
-final class TrelloCard
+abstract class TrelloCard
 {
 }

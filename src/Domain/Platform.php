@@ -1,9 +1,8 @@
 <?php declare(strict_types=1);
 
-namespace App\Platform;
+namespace App\Domain;
 
 use App\Domain\Collection\Contents;
-use App\Domain\PathPart;
 
 interface Platform
 {
