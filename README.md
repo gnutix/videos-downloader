@@ -3,6 +3,8 @@
 This script allows to fetch videos from a source (ex. extract YouTube URLs from Trello cards' descriptions) and
 download them locally into multiple formats (mp3, mp4).
 
+[![Scrutinizer Code Quality](https://scrutinizer-ci.com/g/gnutix/videos-downloader/badges/quality-score.png?b=master)](https://scrutinizer-ci.com/g/gnutix/videos-downloader/?branch=master)
+
 ## Requirements
 
 1. Install youtube-dl python package : https://github.com/rg3/youtube-dl#installation
