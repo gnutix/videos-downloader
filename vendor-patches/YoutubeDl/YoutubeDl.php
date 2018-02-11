@@ -17,6 +17,9 @@ use YoutubeDl\Exception\PrivateVideoException;
 use YoutubeDl\Exception\UrlNotSupportedException;
 use YoutubeDl\Exception\YoutubeDlException;
 
+/**
+ * Modified version of YoutubeDl. See https://github.com/norkunas/youtube-dl-php/pull/60
+ */
 class YoutubeDl
 {
     const PROGRESS_PATTERN = '#\[download\]\s+(?<percentage>\d+(?:\.\d+)?%)\s+of\s+(?<size>\d+(?:\.\d+)?(?:K|M|G)iB)(?:\s+at\s+(?<speed>\d+(?:\.\d+)?(?:K|M|G)iB/s))?(?:\s+ETA\s+(?<eta>[\d]{2}:[\d]{2}))?#i';

@@ -7,9 +7,8 @@ use App\Domain\Content;
 use App\Domain\Path;
 use App\Domain\PathPart;
 use App\Platform\Platform;
+use App\Platform\YouTube\Exception as YouTubeException;
 use App\UI\UserInterface;
-use App\YoutubeDl\Exception as YoutubeDlException;
-use App\YoutubeDl\YoutubeDl;
 use Symfony\Component\Filesystem\Filesystem;
 
 final class YouTube implements Platform
@@ -187,10 +186,10 @@ REGEX;
                     $this->ui->writeln('<info>Done.</info>');
                     break;
 
-                } catch (YoutubeDlException\ChannelRemovedByUserException
-                    | YoutubeDlException\VideoBlockedByCopyrightException
-                    | YoutubeDlException\VideoRemovedByUserException
-                    | YoutubeDlException\VideoUnavailableException
+                } catch (YouTubeException\ChannelRemovedByUserException
+                    | YouTubeException\VideoBlockedByCopyrightException
+                    | YouTubeException\VideoRemovedByUserException
+                    | YouTubeException\VideoUnavailableException
                 $e) {
                     $this->ui->logError($e->getMessage(), $errors);
                     break;
@@ -214,13 +213,16 @@ REGEX;
 
     /**
      * @param \App\Platform\YouTube\Download $download
-     * @param array $youtubeDlOptions
+     * @param array $downloadOptions
      *
      * @throws \Exception
      */
-    private function doDownload(Download $download, array $youtubeDlOptions)
+    private function doDownload(Download $download, array $downloadOptions)
     {
-        $dl = new YoutubeDl($youtubeDlOptions);
+        $youtubeDlOptions = $this->options['youtube_dl'];
+
+        /** @var \YouTubeDl\YouTubeDl $dl */
+        $dl = new $youtubeDlOptions['class_name']($downloadOptions);
         $dl->setDownloadPath((string) $download->getPath());
 
         try {
@@ -230,22 +232,22 @@ REGEX;
 
             // Add more custom exceptions than those already provided by YoutubeDl
             if (preg_match('/this video is unavailable/i', $e->getMessage())) {
-                throw new YoutubeDlException\VideoUnavailableException(
+                throw new YouTubeException\VideoUnavailableException(
                     sprintf('The video %s is unavailable.', $download->getVideoId()), 0, $e
                 );
             }
             if (preg_match('/this video has been removed by the user/i', $e->getMessage())) {
-                throw new YoutubeDlException\VideoRemovedByUserException(
+                throw new YouTubeException\VideoRemovedByUserException(
                     sprintf('The video %s has been removed by its user.', $download->getVideoId()), 0, $e
                 );
             }
             if (preg_match('/the uploader has closed their YouTube account/i', $e->getMessage())) {
-                throw new YoutubeDlException\ChannelRemovedByUserException(
+                throw new YouTubeException\ChannelRemovedByUserException(
                     sprintf('The channel that published the video %s has been removed.', $download->getVideoId()), 0, $e
                 );
             }
             if (preg_match('/who has blocked it on copyright grounds/i', $e->getMessage())) {
-                throw new YoutubeDlException\VideoBlockedByCopyrightException(
+                throw new YouTubeException\VideoBlockedByCopyrightException(
                     sprintf('The video %s has been block for copyright infringement.', $download->getVideoId()), 0, $e
                 );
             }

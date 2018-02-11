@@ -53,6 +53,8 @@ platforms:
 
         # Options passed to the 'youtube-dl' python library. Each options set represents one download attempt.
         youtube_dl:
+            class_name: \App\YouTubeDl\YouTubeDl
+
             # Default options for every file type
             _: &DEFAULT_YOUTUBE_DL_OPTION
                 continue: true # resume video download when it has failed in the middle of it (using .{ext}.part file)
