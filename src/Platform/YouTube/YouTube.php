@@ -49,6 +49,9 @@ REGEX;
         $platformPathPart = new PathPart($this->options['path_part']);
         $downloadPath = new Path([$rootPathPart, $platformPathPart]);
 
+        // Try to create the downloads directory... 'cause if it fails, nothing will work.
+        (new Filesystem())->mkdir((string) $downloadPath);
+
         // Add the platform path part and get a collection of downloads
         $downloads = new Collection();
         foreach ($contents as $content) {
@@ -60,7 +63,12 @@ REGEX;
         }
 
         $this->cleanFilesystem($downloads, $downloadPath);
-        $this->download($downloads, $downloadPath);
+
+        $downloads = $this->filterAlreadyDownloaded($downloads);
+
+        if ($this->shouldDownload($downloads, $downloadPath)) {
+            $this->download($downloads);
+        }
     }
 
     /**
@@ -92,20 +100,12 @@ REGEX;
 
     /**
      * @param \App\Platform\YouTube\Download[]|\App\Domain\Collection $downloads
-     * @param \App\Domain\Path $downloadPath
      *
-     * @throws \RuntimeException
+     * @return \App\Platform\YouTube\Download[]|\App\Domain\Collection
      */
-    private function download(Collection $downloads, Path $downloadPath)
+    private function filterAlreadyDownloaded(Collection $downloads): Collection
     {
-        // Try to create the downloads directory... 'cause if it fails, nothing will work.
-        (new Filesystem())->mkdir((string) $downloadPath);
-
-        $this->ui->writeln('Download files from YouTube... '.PHP_EOL);
-
-        // Filter out downloads that have already been downloaded
-        /** @var \App\Platform\YouTube\Download[]|\App\Domain\Collection $downloads */
-        $downloads = $downloads->filter(
+        return $downloads->filter(
             function (Download $download) {
                 $shouldBeDownloaded = true;
                 try {
@@ -119,11 +119,22 @@ REGEX;
                 return $shouldBeDownloaded;
             }
         );
+    }
+
+    /**
+     * @param \App\Platform\YouTube\Download[]|\App\Domain\Collection $downloads
+     * @param \App\Domain\Path $downloadPath
+     *
+     * @return bool
+     */
+    private function shouldDownload(Collection $downloads, Path $downloadPath): bool
+    {
+        $this->ui->writeln('Download files from YouTube... '.PHP_EOL);
 
         if ($downloads->isEmpty()) {
             $this->ui->writeln($this->ui->indent().'<comment>Nothing to download.</comment>'.PHP_EOL);
 
-            return;
+            return false;
         }
 
         $this->ui->writeln(
@@ -139,9 +150,19 @@ REGEX;
         if ($this->skip() || !$this->ui->confirm()) {
             $this->ui->writeln(PHP_EOL.'<info>Done.</info>'.PHP_EOL);
 
-            return;
+            return false;
         }
 
+        return true;
+    }
+
+    /**
+     * @param \App\Platform\YouTube\Download[]|\App\Domain\Collection $downloads
+     *
+     * @throws \RuntimeException
+     */
+    private function download(Collection $downloads)
+    {
         $errors = [];
         foreach ($downloads as $download) {
             $this->ui->write(
