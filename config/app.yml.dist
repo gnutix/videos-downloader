@@ -4,10 +4,12 @@ path_part:
     path: '%project_root%/downloads'
     priority: -255
 
-runs:
+sources:
     -
         Extension\Trello\Trello:
-            config: []
+            config:
+                board_id: ~ # this needs to be filled in!
             platforms:
                 -
-                    Extension\YouTube\YouTube: []
+                    Extension\YouTube\YouTube:
+                        config: []

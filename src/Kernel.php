@@ -37,10 +37,10 @@ final class Kernel
                     });
 
                 foreach ((array) $sourceData['platforms'] as $platforms) {
-                    foreach ((array) $platforms as $platformClassName => $platformConfig) {
+                    foreach ((array) $platforms as $platformClassName => $platformData) {
 
                         /** @var \App\Domain\Platform $platform */
-                        $platform = new $platformClassName($ui, $platformConfig ?? []);
+                        $platform = new $platformClassName($ui, $platformData['config'] ?? []);
                         $platform->synchronizeContents($contents, $rootPathPart);
                     }
                 }

@@ -22,6 +22,7 @@ final class Trello implements Source
 
     /**
      * {@inheritdoc}
+     * @throws \RuntimeException
      * @throws \Symfony\Component\Yaml\Exception\ParseException
      */
     public function __construct(UserInterface $ui, array $config = [])
@@ -31,6 +32,10 @@ final class Trello implements Source
             (array) Yaml::parseFile(__DIR__.DIRECTORY_SEPARATOR.'config/config.yml'),
             $config
         );
+
+        if (!isset($this->config['board_id']) || empty($this->config['board_id'])) {
+            throw new \RuntimeException('The board_id must be provided for Trello source.');
+        }
     }
 
     /**
