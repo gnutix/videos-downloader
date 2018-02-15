@@ -38,7 +38,7 @@ REGEX;
     {
         $this->ui->writeln('Download PDF files... '.PHP_EOL);
 
-        foreach ($contents->slice(16) as $content) {
+        foreach ($contents as $content) {
             foreach ($this->extractPdfLinks($content) as $download) {
                 $this->download($download);
             }
@@ -84,7 +84,6 @@ REGEX;
                 $filePath
             )
         );
-
 
         (new Filesystem())->mkdir($downloadPath);
         (new Client())->request('GET', $downloadUrl, ['sink' => $filePath]);
