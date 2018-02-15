@@ -17,7 +17,7 @@ use Symfony\Component\Finder\Finder;
 
 final class YouTube extends FilesystemManager implements Platform
 {
-    // See https://stackoverflow.com/a/37704433/389519
+    /** @url https://stackoverflow.com/a/37704433/389519 */
     private const YOUTUBE_URL_REGEX = <<<REGEX
 /\b((?:https?:)?\/\/)?((?:www|m)\.)?((?:youtube\.com|youtu.be))(\/(?:[\w\-]+\?v=|embed\/|v\/)?)([\w\-]+)(\S+)?/i
 REGEX;
