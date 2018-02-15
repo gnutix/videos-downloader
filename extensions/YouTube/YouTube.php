@@ -17,18 +17,11 @@ use Symfony\Component\Finder\Finder;
 
 final class YouTube extends FilesystemManager implements Platform
 {
-    /** @url https://stackoverflow.com/a/37704433/389519 */
-    private const YOUTUBE_URL_REGEX = <<<REGEX
-/\b((?:https?:)?\/\/)?((?:www|m)\.)?((?:youtube\.com|youtu.be))(\/(?:[\w\-]+\?v=|embed\/|v\/)?)([\w\-]+)(\S+)?/i
-REGEX;
-    private const YOUTUBE_URL_REGEX_MATCHES_ID_INDEX = 5;
-    private const YOUTUBE_URL_PREFIX = 'https://www.youtube.com/watch?v=';
-
     /** @var array */
     private $options;
 
     /**
-     * @param \App\UI\UserInterface $ui
+     * {@inheritdoc}
      * @param array $config
      *
      * @throws \Symfony\Component\Yaml\Exception\ParseException
@@ -44,10 +37,9 @@ REGEX;
     }
 
     /**
-     * @param \App\Domain\Collection\Contents $contents
-     * @param \App\Domain\PathPart $rootPathPart
-     *
+     * {@inheritdoc}
      * @throws \RuntimeException
+     * @throws \Symfony\Component\Filesystem\Exception\IOException
      */
     public function synchronizeContents(Contents $contents, PathPart $rootPathPart): void
     {
@@ -74,6 +66,27 @@ REGEX;
         $this->cleanFilesystem($downloads, $downloadPath);
 
         $downloads = $this->filterAlreadyDownloaded($downloads);
+
+        /*
+        $downloads = new Downloads([
+            new Download(
+                new Path([new PathPart(['path' => (string) $downloadPath.'/test'])]),
+                'vimeo',
+                '184897680',
+                'https://player.vimeo.com/external/184897680.hd.mp4?s=acc0effeaea08c29bc83141f237a57a95a9c938e&profile_id=174&download=1',
+                'audio',
+                'mp3'
+            ),
+            new Download(
+                new Path([new PathPart(['path' => (string) $downloadPath.'/test'])]),
+                'vimeo',
+                '184897680',
+                'https://player.vimeo.com/external/184897680.hd.mp4?s=acc0effeaea08c29bc83141f237a57a95a9c938e&profile_id=174&download=1',
+                'video',
+                'mp4'
+            )
+        ]);
+        */
 
         if ($this->shouldDownload($downloads, $downloadPath)) {
             $this->download($downloads, $downloadPath);
@@ -118,7 +131,7 @@ REGEX;
             'priority' => 0,
         ]);
         $folderPathPart = new PathPart([
-            'path' => $this->options['patterns']['folder'],
+            'path' => $this->options['platforms'][$download->getPlatform()]['downloader']['folder'],
             'priority' => 1,
             'substitutions' => $placeholders,
         ]);
@@ -131,7 +144,7 @@ REGEX;
                 str_replace(
                     array_keys($placeholders),
                     array_values($placeholders),
-                    $this->options['patterns']['filename']
+                    $this->options['platforms'][$download->getPlatform()]['downloader']['filename']
                 )
             );
     }
@@ -145,15 +158,30 @@ REGEX;
     {
         $downloads = new Downloads();
 
-        if (preg_match_all(static::YOUTUBE_URL_REGEX, $content->getData(), $youtubeUrls)) {
-            foreach ((array) $youtubeUrls[static::YOUTUBE_URL_REGEX_MATCHES_ID_INDEX] as $youtubeId) {
+        // Loop over each extractor
+        foreach ((array) $this->options['platforms'] as $platform => $platformConfig) {
+
+            // Apply the regex to the content's data
+            if (!preg_match_all($platformConfig['extractor']['regex'], $content->getData(), $matches)) {
+                continue;
+            }
+
+            // Loop over each URL that was extracted
+            foreach ((array) $matches[$platformConfig['extractor']['video_url_index']] as $index => $videoUrl) {
+                $videoId = $matches[$platformConfig['extractor']['video_id_index']][$index];
+
+                // Loop over each file format we'd like to download
                 foreach (array_keys($this->options['youtube_dl']['options']) as $videoFileType) {
+                    $videoFileExtension = $this->options['files_extensions'][$videoFileType];
+
                     $downloads->add(
                         new Download(
                             $content->getPath(),
-                            $youtubeId,
+                            $platform,
+                            $videoId,
+                            $videoUrl,
                             $videoFileType,
-                            $this->options['patterns']['extensions'][$videoFileType]
+                            $videoFileExtension
                         )
                     );
                 }
@@ -194,7 +222,7 @@ REGEX;
      */
     private function shouldDownload(Downloads $downloads, Path $downloadPath): bool
     {
-        $this->ui->writeln('Download files from YouTube... '.PHP_EOL);
+        $this->ui->writeln('Download files with youtube-dl... '.PHP_EOL);
 
         if ($downloads->isEmpty()) {
             $this->ui->writeln($this->ui->indent().'<comment>Nothing to download.</comment>'.PHP_EOL);
@@ -242,9 +270,17 @@ REGEX;
                 )
             );
 
-            $options = $this->options['youtube_dl']['options'][$download->getFileType()];
-            $nbAttempts = \count($options);
+            $options = (array) $this->options['youtube_dl']['options'][$download->getFileType()];
 
+            // Override "youtube_dl.options" by the platforms' specific youtube-dl's options
+            foreach ($options as $pass => $values) {
+                $options[$pass] = array_merge(
+                    $this->options['platforms'][$download->getPlatform()]['downloader']['youtube_dl']['options'],
+                    $values
+                );
+            }
+
+            $nbAttempts = \count($options);
             $attempt = 0;
             while (true) {
                 try {
@@ -294,7 +330,7 @@ REGEX;
 
         try {
             (new Filesystem())->mkdir((string) $download->getPath());
-            $dl->download(static::YOUTUBE_URL_PREFIX.$download->getVideoId());
+            $dl->download($download->getVideoUrl());
         } catch (\Exception $e) {
 
             // Add more custom exceptions than those already provided by YoutubeDl

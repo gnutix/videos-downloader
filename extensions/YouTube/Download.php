@@ -11,7 +11,13 @@ final class Download implements DownloadInterface
     private $path;
 
     /** @var string */
+    private $platform;
+
+    /** @var string */
     private $videoId;
+
+    /** @var string */
+    private $videoUrl;
 
     /** @var string */
     private $fileType;
@@ -21,18 +27,24 @@ final class Download implements DownloadInterface
 
     /**
      * @param \App\Domain\Collection\Path $path
+     * @param string $platform
      * @param string $videoId
+     * @param string $videoUrl
      * @param string $fileType
      * @param string $fileExtension
      */
     public function __construct(
         Path $path,
+        string $platform,
         string $videoId,
+        string $videoUrl,
         string $fileType,
         string $fileExtension
     ) {
         $this->path = $path;
+        $this->platform = $platform;
         $this->videoId = $videoId;
+        $this->videoUrl = $videoUrl;
         $this->fileType = $fileType;
         $this->fileExtension = $fileExtension;
     }
@@ -56,9 +68,25 @@ final class Download implements DownloadInterface
     /**
      * @return string
      */
+    public function getPlatform(): string
+    {
+        return $this->platform;
+    }
+
+    /**
+     * @return string
+     */
     public function getVideoId(): string
     {
         return $this->videoId;
+    }
+
+    /**
+     * @return string
+     */
+    public function getVideoUrl(): string
+    {
+        return $this->videoUrl;
     }
 
     /**
