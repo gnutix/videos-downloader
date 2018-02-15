@@ -24,7 +24,6 @@ use Doctrine\Common\Collections\Criteria;
  * @method PathPart[]|Path map(\Closure $p)
  * @method PathPart[]|Path filter(\Closure $p)
  * @method Path[] partition(\Closure $p)
- * @method PathPart[]|Path slice($offset, $length = null)
  * @method PathPart[]|Path matching(Criteria $criteria)
  */
 final class Path extends Collection

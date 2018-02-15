@@ -22,7 +22,6 @@ use Doctrine\Common\Collections\Criteria;
  * @method Download[]|Downloads map(\Closure $p)
  * @method Download[]|Downloads filter(\Closure $p)
  * @method Downloads[] partition(\Closure $p)
- * @method Download[]|Downloads slice($offset, $length = null)
  * @method Download[]|Downloads matching(Criteria $criteria)
  */
 abstract class Downloads extends Collection
