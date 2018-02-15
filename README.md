@@ -8,7 +8,8 @@ download them locally into multiple formats (mp3, mp4).
 ## Requirements
 
 1. Install youtube-dl python package : https://github.com/rg3/youtube-dl#installation
-2. Install the vendors :
+1. Install Composer : https://getcomposer.org/download/
+1. Install the vendors :
 
 `composer install`
 

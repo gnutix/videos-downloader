@@ -8,11 +8,13 @@
     },
     "require": {
         "php": ">= 7.1",
+
         "symfony/console": "^4.0",
         "symfony/filesystem": "^4.0",
         "symfony/finder": "^4.0",
         "symfony/yaml": "^4.0",
         "doctrine/collections": "^1.5",
+
         "stevenmaguire/trello-php": "^0.4.1",
         "norkunas/youtube-dl-php": "^1.0"
     },
