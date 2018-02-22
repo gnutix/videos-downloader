@@ -1,0 +1,10 @@
+path_part:
+    path: PDFs
+    priority: -50
+
+extractor:
+    regex: >-
+        ~
+        ((?:http|https)\:\/\/[a-zA-Z0-9\-\.]+\.[a-zA-Z]{2,3}(?:\/\S*)?\.pdf)
+        ~ix
+    pdf_url_index: 0

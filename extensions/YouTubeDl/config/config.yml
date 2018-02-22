@@ -1,0 +1,100 @@
+---
+path_part:
+    path: 'YouTubeDl'
+    priority: -50
+
+# the keys should match those of "youtube_dl.options"
+download_files:
+    audio: mp3
+    video: mp4
+
+downloaders:
+    youtube:
+        # @url https://stackoverflow.com/a/10405818/389519
+        extractor:
+            regex: >-
+                ~
+                    https?:\/\/(?:[0-9A-Z-]+\.)?
+                    (?:
+                        youtu\.be\/|
+                        youtube\.com
+                        (?:
+                            \/embed\/|\/v\/|\/watch\?v=|
+                            \/ytscreeningroom\?v=|
+                            \/feeds\/api\/videos\/|
+                            \/user\S*[^\w\-\s]|
+                            \S*[^\w\-\s]
+                        )
+                    )
+                    ([\w\-]{11})
+                    [?=&+%\w-]*
+                ~ix
+            video_url_index: 0
+            video_id_index: 1
+
+        downloader:
+            # available variables: %video_id%, %file_extension%
+            folder: '%video_id% (*)' # matches '%(id)s (%(uploader)s, %(upload_date)s)'
+
+            # available variables: %video_id%, %file_extension%
+            filename: '*.%file_extension%' # matches '%(title)s.%(ext)s'
+
+            # extra youtube-dl options
+            youtube_dl:
+                options:
+                    # available variables: see https://github.com/rg3/youtube-dl#output-template
+                    output: '%(id)s (%(uploader)s, %(upload_date)s)/%(title)s.%(ext)s'
+
+    vimeo:
+        extractor:
+            regex: >-
+                ~
+                https?:\/\/player\.vimeo\.com\/(?:[\w\/]+)?\/(\d+)(?:\.hd\.mp4)?(?:\?s.*)?
+                ~ix
+            video_url_index: 0
+            video_id_index: 1
+
+        downloader:
+
+            # available variables: %video_id%, %file_extension%
+            folder: ''
+
+            # available variables: %video_id%, %file_extension%
+            filename: '*.%file_extension%' # matches '%(title)s.%(ext)s'
+
+            # extra youtube-dl options
+            youtube_dl:
+                options:
+                    # available variables: see https://github.com/rg3/youtube-dl#output-template
+                    output: '%(title)s.%(ext)s'
+
+# Options passed to the 'youtube-dl' python library. Each options set represents one download attempt.
+youtube_dl:
+
+    # This should be changed to "YoutubeDl\YoutubeDl" once https://github.com/norkunas/youtube-dl-php/pull/60
+    # has been merged.
+    class_name: App\YoutubeDl\YoutubeDl
+
+    # Default options for every file type
+    _: &DEFAULT_YOUTUBE_DL_OPTION
+        continue: true # resume video download when it has failed in the middle of it (using .{ext}.part file)
+        add-metadata: true # ensure there's mp3 ID3 tags on the downloaded files
+
+    options:
+        audio:
+            -
+                <<: *DEFAULT_YOUTUBE_DL_OPTION
+                extract-audio: true
+                audio-format: mp3
+                audio-quality: 0 # best
+
+        video:
+            -
+                <<: *DEFAULT_YOUTUBE_DL_OPTION
+                format: 'mp4[height <=? 720]'
+            -
+                <<: *DEFAULT_YOUTUBE_DL_OPTION
+                format: 'mp4[height <=? 1080p]'
+            -
+                <<: *DEFAULT_YOUTUBE_DL_OPTION
+                format: 'mp4'

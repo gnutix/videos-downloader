@@ -1,5 +1,5 @@
-config/
-!config/app.yml.dist
+/config/
+!/config/app.yml.dist
 downloads
 !downloads/.gitkeep
 vendor
