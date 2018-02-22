@@ -4,15 +4,12 @@ path_part:
     priority: -50
 
 # the keys should match those of "youtube_dl.options"
-files_extensions:
+download_files:
     audio: mp3
     video: mp4
 
-platforms:
+downloaders:
     youtube:
-        # Deprecated... @url https://stackoverflow.com/a/37704433/389519
-        #regex: '/\b(((?:https?:)?\/\/)?((?:www|m)\.)?((?:youtube\.com|youtu.be))(\/(?:[\w\-]+\?v=|embed\/|v\/)?)([\w\-]+))(\S+)?/i'
-
         # @url https://stackoverflow.com/a/10405818/389519
         extractor:
             regex: |
@@ -50,31 +47,17 @@ platforms:
 
     vimeo:
         extractor:
-            # Adapted from @url https://github.com/regexhq/vimeo-regex
             regex: |
                 ~
-                # Match Vimeo link and embed code
-                (?:<iframe [^>]*src=")?     # If iframe match up to first quote of src
-                (                           # Group vimeo url
-                    https?:\/\/             # Either http or https
-                    (?:[\w]+\.)*            # Optional subdomains
-                    vimeo\.com              # Match vimeo.com
-                    (?:[\/\w]*\/videos?)?   # Optional video sub directory this handles groups links also
-                    \/                      # Slash before Id
-                    ([0-9]+)                # $1: VIDEO_ID is numeric
-                )                           # End group
-                [^\s]*                      # Not a space
-                "?                          # Match end quote if part of src
-                (?:[^>]*></iframe>)?        # Match the end of the iframe
-                (?:<p>.*</p>)?              # Match any title information stuff
+                https?:\/\/player\.vimeo\.com\/(?:[\w\/]+)?\/(\d+)(?:\.hd\.mp4)?(?:\?s.*)?
                 ~ix
-            video_url_index: 1
-            video_id_index: 2
+            video_url_index: 0
+            video_id_index: 1
 
         downloader:
 
             # available variables: %video_id%, %file_extension%
-            folder: '%video_id% (*)' # matches '%(title)s (%(upload_date)s)'
+            folder: ''
 
             # available variables: %video_id%, %file_extension%
             filename: '*.%file_extension%' # matches '%(title)s.%(ext)s'
@@ -83,7 +66,7 @@ platforms:
             youtube_dl:
                 options:
                     # available variables: see https://github.com/rg3/youtube-dl#output-template
-                    output: '%(title)s (%(upload_date)s)/%(title)s.%(ext)s'
+                    output: '%(title)s.%(ext)s'
 
 # Options passed to the 'youtube-dl' python library. Each options set represents one download attempt.
 youtube_dl:

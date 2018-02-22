@@ -2,7 +2,7 @@
 
 namespace App\Filesystem;
 
-use App\Domain\Collection\Collection;
+use App\Collection\Collection;
 use Doctrine\Common\Collections\Criteria;
 
 /**

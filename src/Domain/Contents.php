@@ -1,8 +1,8 @@
 <?php declare(strict_types=1);
 
-namespace App\Domain\Collection;
+namespace App\Domain;
 
-use App\Domain\Content;
+use App\Collection\Collection;
 use Doctrine\Common\Collections\Criteria;
 
 /**

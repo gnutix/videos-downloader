@@ -18,7 +18,7 @@ final class PathPart
      */
     public function __construct(array $config)
     {
-        $this->path = rtrim($config['path'], DIRECTORY_SEPARATOR);
+        $this->path = rtrim($config['path'] ?? '', DIRECTORY_SEPARATOR);
         $this->priority = $config['priority'] ?? 0;
         $this->substitutions = $config['substitutions'] ?? [];
     }

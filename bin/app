@@ -2,13 +2,35 @@
 <?php
 require __DIR__.'/../vendor/autoload.php';
 
-use App\Cli\Command\Download;
+use App\UI\CommandLineInterface;
+use App\Kernel;
 use Symfony\Component\Console\Application;
+use Symfony\Component\Console\Command\Command;
+use Symfony\Component\Console\Input\InputInterface;
+use Symfony\Component\Console\Input\InputOption;
+use Symfony\Component\Console\Output\OutputInterface;
 
 putenv('PROJECT_ROOT='.dirname(__DIR__));
 
+$command = new class('app:run') extends Command
+{
+    protected function configure(): void
+    {
+        $this->addOption('dry-run', 'd', InputOption::VALUE_NONE, 'Execute the script as a dry run.')
+            ->addOption('config', 'c', InputOption::VALUE_REQUIRED, 'The configuration file.', Kernel::DEFAULT_CONFIG);
+    }
+
+    protected function execute(InputInterface $input, OutputInterface $output): void
+    {
+        $dryRun = (bool) $input->getOption('dry-run');
+        $configFilePath = (string) $input->getOption('config');
+
+        (new Kernel)($configFilePath, new CommandLineInterface($dryRun, $this, $input, $output));
+    }
+};
+
 $application = (new Application())
-    ->add(new Download())
+    ->add($command)
     ->getApplication()
-    ->setDefaultCommand(Download::COMMAND_NAME, true)
+    ->setDefaultCommand($command->getName(), true)
     ->run();

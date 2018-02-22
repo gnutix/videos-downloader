@@ -10,17 +10,20 @@ use Symfony\Component\Yaml\Yaml;
 
 final class Kernel
 {
+    public const DEFAULT_CONFIG = 'config/app.yml';
+
     /**
+     * @param string $configFilePath
      * @param \App\UI\UserInterface $ui
      *
      * @throws \RuntimeException
      * @throws \Symfony\Component\Filesystem\Exception\IOException
      * @throws \Symfony\Component\Yaml\Exception\ParseException
      */
-    public function __invoke(UserInterface $ui): void
+    public function __invoke($configFilePath, UserInterface $ui): void
     {
-        $config = (array) Yaml::parseFile($this->getProjectDir().DIRECTORY_SEPARATOR.'config/app.yml');
-        $rootPathPart = $this->getRootPathPart($config['path_part']);
+        $config = (array) Yaml::parseFile($this->getConfigAbsoluteFilePath($configFilePath));
+        $rootPathPart = $this->getRootPathPart($config['path_part'] ?? []);
 
         foreach ((array) $config['sources'] as $sources) {
             foreach ((array) $sources as $sourceClassName => $sourceData) {
@@ -36,12 +39,12 @@ final class Kernel
                         return $content;
                     });
 
-                foreach ((array) $sourceData['platforms'] as $platforms) {
-                    foreach ((array) $platforms as $platformClassName => $platformData) {
+                foreach ((array) $sourceData['downloaders'] as $downloaders) {
+                    foreach ((array) $downloaders as $downloaderClassName => $downloaderData) {
 
-                        /** @var \App\Domain\Platform $platform */
-                        $platform = new $platformClassName($ui, $platformData['config'] ?? []);
-                        $platform->synchronizeContents($contents, $rootPathPart);
+                        /** @var \App\Domain\Downloader $downloader */
+                        $downloader = new $downloaderClassName($ui, $downloaderData['config'] ?? []);
+                        $downloader->synchronizeContents($contents, $rootPathPart);
                     }
                 }
             }
@@ -72,14 +75,27 @@ final class Kernel
      */
     private function getRootPathPart(array $config): PathPart
     {
-        $config['substitutions'] = [
-                '%project_root%' => $this->getProjectDir()
-            ] + ($config['substitutions'] ?? []);
+        $config['substitutions'] = ['%project_root%' => $this->getProjectDir()] + ($config['substitutions'] ?? []);
         $rootPathPart = new PathPart($config);
 
         // Try to create the root directory... 'cause if it fails, nothing will work.
         (new Filesystem())->mkdir($rootPathPart->getPath());
 
         return $rootPathPart;
+    }
+
+    /**
+     * @param string $configFilePath
+     *
+     * @return string
+     * @throws \RuntimeException
+     */
+    private function getConfigAbsoluteFilePath(string $configFilePath): string
+    {
+        if (DIRECTORY_SEPARATOR === $configFilePath{0}) {
+            return $configFilePath;
+        }
+
+        return $this->getProjectDir().DIRECTORY_SEPARATOR.$configFilePath;
     }
 }

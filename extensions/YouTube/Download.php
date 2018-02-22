@@ -2,16 +2,16 @@
 
 namespace Extension\YouTube;
 
-use App\Domain\Collection\Path;
+use App\Domain\Path;
 use App\Domain\Download as DownloadInterface;
 
 final class Download implements DownloadInterface
 {
-    /** @var \App\Domain\Collection\Path */
+    /** @var \App\Domain\Path */
     private $path;
 
     /** @var string */
-    private $platform;
+    private $downloader;
 
     /** @var string */
     private $videoId;
@@ -26,8 +26,8 @@ final class Download implements DownloadInterface
     private $fileExtension;
 
     /**
-     * @param \App\Domain\Collection\Path $path
-     * @param string $platform
+     * @param \App\Domain\Path $path
+     * @param string $downloader
      * @param string $videoId
      * @param string $videoUrl
      * @param string $fileType
@@ -35,14 +35,14 @@ final class Download implements DownloadInterface
      */
     public function __construct(
         Path $path,
-        string $platform,
+        string $downloader,
         string $videoId,
         string $videoUrl,
         string $fileType,
         string $fileExtension
     ) {
         $this->path = $path;
-        $this->platform = $platform;
+        $this->downloader = $downloader;
         $this->videoId = $videoId;
         $this->videoUrl = $videoUrl;
         $this->fileType = $fileType;
@@ -58,7 +58,7 @@ final class Download implements DownloadInterface
     }
 
     /**
-     * @return \App\Domain\Collection\Path
+     * @return \App\Domain\Path
      */
     public function getPath(): Path
     {
@@ -70,7 +70,7 @@ final class Download implements DownloadInterface
      */
     public function getPlatform(): string
     {
-        return $this->platform;
+        return $this->downloader;
     }
 
     /**

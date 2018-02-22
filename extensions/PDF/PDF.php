@@ -2,63 +2,65 @@
 
 namespace Extension\PDF;
 
-use App\Domain\Collection\Contents;
+use App\Domain\Downloader;
+use App\Domain\Path;
 use App\Domain\Content;
 use App\Domain\Download as DownloadInterface;
+use App\Domain\Downloads as DownloadsInterface;
 use App\Domain\PathPart;
-use App\Domain\Platform;
-use App\UI\UserInterface;
 use GuzzleHttp\Client;
 use Symfony\Component\Filesystem\Filesystem;
+use Symfony\Component\Finder\Finder;
 
-final class PDF implements Platform
+final class PDF extends Downloader
 {
-    private const PDF_REGEX = <<<REGEX
-/((?:http|https)\:\/\/[a-zA-Z0-9\-\.]+\.[a-zA-Z]{2,3}(?:\/\S*)?\.pdf)/i
-REGEX;
-
-    /** @var \App\UI\UserInterface */
-    private $ui;
-
     /**
-     * @param \App\UI\UserInterface $ui
+     * {@inheritdoc}
      */
-    public function __construct(UserInterface $ui)
+    protected function getConfigFilePath(): string
     {
-        $this->ui = $ui;
+        return __DIR__.DIRECTORY_SEPARATOR.'config/config.yml';
     }
 
     /**
-     * @param \App\Domain\Collection\Contents $contents
-     * @param \App\Domain\PathPart $rootPathPart
-     *
-     * @throws \Symfony\Component\Filesystem\Exception\IOException
+     * {@inheritdoc}
      */
-    public function synchronizeContents(Contents $contents, PathPart $rootPathPart): void
+    protected function createDownloadsCollection(): DownloadsInterface
     {
-        $this->ui->writeln('Download PDF files... '.PHP_EOL);
-
-        foreach ($contents as $content) {
-            foreach ($this->extractPdfLinks($content) as $download) {
-                $this->download($download);
-            }
-        }
-
-        $this->ui->writeln(PHP_EOL.'<info>Done.</info>'.PHP_EOL);
+        return new Downloads();
     }
 
     /**
-     * @param \App\Domain\Content $content
+     * @param \Extension\PDF\Download|DownloadInterface $download
      *
-     * @return \Extension\PDF\Downloads
+     * @return string
      */
-    private function extractPdfLinks(Content $content): Downloads
+    protected function getDownloadFolder(DownloadInterface $download): string
+    {
+        return pathinfo((string) $download->getPath(), PATHINFO_DIRNAME);
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    protected function getDownloadFolderFinder(DownloadInterface $download): Finder
+    {
+        return parent::getDownloadFolderFinder($download)->name('*.pdf');
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    protected function extractDownloads(Content $content): DownloadsInterface
     {
         $downloads = new Downloads();
 
-        if (preg_match_all(static::PDF_REGEX, $content->getData(), $matches)) {
-            foreach ((array) $matches[0] as $pdfLink) {
-                $downloads->add(new Download($pdfLink, $content->getPath()));
+        if (preg_match_all($this->config['extractor']['regex'], $content->getData(), $matches)) {
+            foreach ((array) $matches[$this->config['extractor']['pdf_url_index']] as $pdfLink) {
+                $path = Path::createFromPath($content->getPath());
+                $path->add(new PathPart(['path' => pathinfo($pdfLink, PATHINFO_BASENAME)]));
+
+                $downloads->add(new Download($pdfLink, $path));
             }
         }
 
@@ -66,26 +68,62 @@ REGEX;
     }
 
     /**
+     * {@inheritdoc}
+     */
+    protected function filterAlreadyDownloaded(DownloadsInterface $downloads): DownloadsInterface
+    {
+        return $downloads->filter(function (Download $download) {
+            return !file_exists((string) $download->getPath());
+        });
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    protected function download(DownloadsInterface $downloads, Path $downloadPath): void
+    {
+        $errors = [];
+        foreach ($downloads as $download) {
+            $this->ui->write(
+                sprintf(
+                    '%s* Download the PDF file in <info>%s</info>... ',
+                    $this->ui->indent(2),
+                    (string) $downloadPath
+                )
+            );
+
+            $nbAttempts = $this->config['nb_attempts'] ?? 3;
+            $attempt = 0;
+            while (true) {
+                try {
+                    $this->doDownload($download);
+
+                    $this->ui->writeln('<info>Done.</info>');
+                    break;
+                } catch (\Exception $e) {
+                    $attempt++;
+
+                    // Maximum number of attempts reached, move along...
+                    if ($attempt === $nbAttempts) {
+                        $this->ui->logError($e->getMessage(), $errors);
+                        break;
+                    }
+                }
+            }
+        }
+        $this->ui->displayErrors($errors, 'download of files', 'error', 1);
+
+        $this->ui->writeln(PHP_EOL.'<info>Done.</info>'.PHP_EOL);
+    }
+
+    /**
      * @param \Extension\PDF\Download|\App\Domain\Download $download
      *
      * @throws \Symfony\Component\Filesystem\Exception\IOException
      */
-    private function download(DownloadInterface $download): void
+    private function doDownload(DownloadInterface $download): void
     {
-        $downloadPath = (string) $download->getPath();
-        $downloadUrl = $download->getUrl();
-        $fileName = pathinfo($downloadUrl, PATHINFO_BASENAME);
-        $filePath = $downloadPath.DIRECTORY_SEPARATOR.$fileName;
-
-        $this->ui->writeln(
-            sprintf(
-                '%s* Download the PDF file in <info>%s</info>... ',
-                $this->ui->indent(2),
-                $filePath
-            )
-        );
-
-        (new Filesystem())->mkdir($downloadPath);
-        (new Client())->request('GET', $downloadUrl, ['sink' => $filePath]);
+        (new Filesystem())->mkdir($this->getDownloadFolder($download));
+        (new Client())->request('GET', $download->getUrl(), ['sink' => (string) $download->getPath()]);
     }
 }

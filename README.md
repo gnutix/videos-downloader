@@ -1,7 +1,7 @@
 # Videos Downloader
 
-This script allows to fetch videos from a source (ex. extract YouTube URLs from Trello cards' descriptions) and
-download them locally into multiple formats (mp3, mp4).
+This script automates and simplify extracting resources (PDFs, audios/video files, ...) from a source (Trello board,
+CSV file, ...) and downloading them on your computer.
 
 [![Scrutinizer Code Quality](https://scrutinizer-ci.com/g/gnutix/videos-downloader/badges/quality-score.png?b=master)](https://scrutinizer-ci.com/g/gnutix/videos-downloader/?branch=master)
 
@@ -11,43 +11,57 @@ download them locally into multiple formats (mp3, mp4).
 1. Install Composer : https://getcomposer.org/download/
 1. Install the vendors :
 
-`composer install`
+```shell
+composer install
+```
 
 ## Running the application
 
 Copy the default configuration file and adapt the values as needed:
 
-`cp config/app.yml.dist config/app.yml`
+```shell
+cp config/app.yml.dist config/app.yml
+```
 
-To get a list of options for running the script :
+To check the configuration files validity, you can run :
 
-`bin/app --help`
+```shell
+bin/yaml-lint
+```
 
-And finally to run the script :
+To get a list of options for running the script, run :
 
-`bin/app`
+```shell
+bin/app --help
+```
 
-Congratulations! The `downloads/` folder should be full of mp3 / mp4 files... ;)
+And finally to run the script itself :
 
-## Checking the downloaded files
+```shell
+bin/app
+```
+
+Congratulations! The `downloads/` folder should be full of files now... ;)
+
+### Some tips for analyzing the downloaded files
 
 Display the number of files by extension :
 
-```
-find downloads/ -name "*.mp3" | wc -l
-find downloads/ -name "*.mp4" | wc -l
+```shell
+export EXTENSION="mp3" # or mp4, pdf, ...
+find downloads/ -name "*.${EXTENSION}" | wc -l
 ```
 
 Display the sum of all files sizes by extension :
 
-```
-find downloads/ -name "*.mp3" -exec du -b {} \; | awk '{total+=$1}END{print total}' | numfmt --to=iec-i
-find downloads/ -name "*.mp4" -exec du -b {} \; | awk '{total+=$1}END{print total}' | numfmt --to=iec-i
+```shell
+export EXTENSION="mp3" # or mp4, pdf, ...
+find downloads/ -name "*.${EXTENSION}" -exec du -b {} \; | awk '{total+=$1}END{print total}' | numfmt --to=iec-i
 ```
 
 List the 30 most heavy files by extension :
 
-```
-ls -1Rs downloads/ | grep '.mp3' | sed -e "s/^ *//" | grep "^[0-9]" | sort -nr | head -n30
-ls -1Rs downloads/ | grep '.mp4' | sed -e "s/^ *//" | grep "^[0-9]" | sort -nr | head -n30
+```shell
+export EXTENSION="mp3" # or mp4, pdf, ...
+ls -1Rs downloads/ | grep '.${EXTENSION}' | sed -e "s/^ *//" | grep "^[0-9]" | sort -nr | head -n30
 ```

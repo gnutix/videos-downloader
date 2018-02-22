@@ -2,9 +2,9 @@
 
 namespace Extension\Trello;
 
-use App\Domain\Collection\Contents;
+use App\Domain\Contents;
 use App\Domain\Content;
-use App\Domain\Collection\Path;
+use App\Domain\Path;
 use App\Domain\PathPart;
 use App\Domain\Source;
 use App\UI\UserInterface;

@@ -1,6 +1,6 @@
 <?php declare(strict_types=1);
 
-namespace App\Domain\Collection;
+namespace App\Collection;
 
 use Doctrine\Common\Collections\ArrayCollection;
 

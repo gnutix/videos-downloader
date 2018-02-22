@@ -2,7 +2,7 @@
 
 namespace Extension\PDF;
 
-use App\Domain\Collection\Downloads as BaseDownloads;
+use App\Domain\Downloads as BaseDownloads;
 use Doctrine\Common\Collections\Criteria;
 
 /**

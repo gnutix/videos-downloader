@@ -2,7 +2,7 @@
 
 namespace Extension\PDF;
 
-use App\Domain\Collection\Path;
+use App\Domain\Path;
 use App\Domain\Download as DownloadInterface;
 
 final class Download implements DownloadInterface
@@ -10,12 +10,12 @@ final class Download implements DownloadInterface
     /** @var string */
     private $url;
 
-    /** @var \App\Domain\Collection\Path */
+    /** @var \App\Domain\Path */
     private $path;
 
     /**
      * @param string $url
-     * @param \App\Domain\Collection\Path $path
+     * @param \App\Domain\Path $path
      */
     public function __construct(string $url, Path $path)
     {
@@ -40,7 +40,7 @@ final class Download implements DownloadInterface
     }
 
     /**
-     * @return \App\Domain\Collection\Path
+     * @return \App\Domain\Path
      */
     public function getPath(): Path
     {

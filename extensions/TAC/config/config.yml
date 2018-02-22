@@ -2,7 +2,4 @@
 # available variables : %extension_path%
 resources: ~
 
-path_part:
-    # available variables: %lesson_url_path%
-    path: 'Tony''s Acoustic Challenge/%lesson_url_path%'
-    priority: 50
+path_part: ~

@@ -2,8 +2,8 @@
 
 namespace Extension\TAC;
 
-use App\Domain\Collection\Contents;
-use App\Domain\Collection\Path;
+use App\Domain\Contents;
+use App\Domain\Path;
 use App\Domain\Content;
 use App\Domain\PathPart;
 use App\Domain\Source;
@@ -41,7 +41,7 @@ final class TAC implements Source
     }
 
     /**
-     * @return \App\Domain\Collection\Contents
+     * @return \App\Domain\Contents
      * @throws \RuntimeException
      */
     public function getContents(): Contents
@@ -85,15 +85,15 @@ final class TAC implements Source
     /**
      * @param array $record
      *
-     * @return \App\Domain\Collection\Path
+     * @return \App\Domain\Path
      */
     private function generatePath(array $record): Path
     {
-        $pathPartConfig = $this->config['path_part'];
+        $pathPartConfig = $this->config['path_part'] ?? [];
         $pathPartConfig['path'] = str_replace(
             '%lesson_url_path%',
             trim(str_replace(static::TAC_URL, '', $record[0]), DIRECTORY_SEPARATOR),
-            $pathPartConfig['path']
+            $pathPartConfig['path'] ?? ''
         );
 
         return new Path([new PathPart($pathPartConfig)]);
