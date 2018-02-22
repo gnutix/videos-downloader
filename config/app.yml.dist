@@ -9,7 +9,7 @@ sources:
         Extension\Trello\Trello:
             config:
                 board_id: ~ # this needs to be filled in!
-            platforms:
+            downloaders:
                 -
-                    Extension\YouTube\YouTube:
+                    Extension\YouTubeDl\YouTubeDl:
                         config: []

@@ -7,3 +7,11 @@ filter:
 
     dependency_paths:
         - vendor-patches/
+
+build:
+    nodes:
+        analysis:
+            project_setup:
+                override: true
+            tests:
+                override: [php-scrutinizer-run]

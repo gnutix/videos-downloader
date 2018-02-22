@@ -2,15 +2,18 @@
 
 namespace App\Filesystem;
 
-use App\Domain\Collection\Downloads;
-use App\Domain\Collection\Path;
+use App\Domain\Downloads;
+use App\Domain\Path;
 use App\Domain\Download;
+use App\UI\Skippable;
 use App\UI\UserInterface;
 use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\Finder\Finder;
 
 abstract class FilesystemManager
 {
+    use Skippable;
+
     /** @var \App\UI\UserInterface */
     protected $ui;
 
@@ -23,11 +26,31 @@ abstract class FilesystemManager
     }
 
     /**
-     * @param \App\Domain\Collection\Path $downloadPath
+     * @param \App\Domain\Path $downloadPath
      *
      * @return \Symfony\Component\Finder\Finder
+     * @throws \InvalidArgumentException
      */
-    abstract protected function getAllDownloadsFolderFinder(Path $downloadPath): Finder;
+    protected function getAllDownloadsFolderFinder(Path $downloadPath): Finder
+    {
+        return (new Finder())
+            ->directories()
+            ->in((string) $downloadPath)
+            ->sort(function (\SplFileInfo $fileInfoA, \SplFileInfo $fileInfoB) {
+                // Sort the result by folder depth
+                $a = substr_count($fileInfoA->getRealPath(), DIRECTORY_SEPARATOR);
+                $b = substr_count($fileInfoB->getRealPath(), DIRECTORY_SEPARATOR);
+
+                return $a <=> $b;
+            });
+    }
+
+    /**
+     * @param \App\Domain\Download $download
+     *
+     * @return string
+     */
+    abstract protected function getDownloadFolder(Download $download): string;
 
     /**
      * @param \App\Domain\Download $download
@@ -35,25 +58,17 @@ abstract class FilesystemManager
      * @return \Symfony\Component\Finder\Finder|\SplFileInfo[]
      * @throws \InvalidArgumentException
      */
-    abstract protected function getDownloadFolderFinder(Download $download): Finder;
-
-    /**
-     * @return bool
-     */
-    protected function skip(): bool
+    protected function getDownloadFolderFinder(Download $download): Finder
     {
-        if ($this->ui->isDryRun()) {
-            $this->ui->writeln('<info>[DRY-RUN]</info> Not doing anything...'.PHP_EOL);
-
-            return true;
-        }
-
-        return false;
+        return (new Finder())
+            ->files()
+            ->depth('== 0')
+            ->in($this->getDownloadFolder($download));
     }
 
     /**
      * {@inheritdoc}
-     * @param \App\Domain\Collection\Downloads $downloads
+     * @param \App\Domain\Downloads $downloads
      *
      * @throws \RuntimeException
      */
@@ -67,8 +82,8 @@ abstract class FilesystemManager
     }
 
     /**
-     * @param \App\Domain\Collection\Downloads $downloads
-     * @param \App\Domain\Collection\Path $downloadPath
+     * @param \App\Domain\Downloads $downloads
+     * @param \App\Domain\Path $downloadPath
      *
      * @return \App\Filesystem\FilesystemObjects
      * @throws \RuntimeException
@@ -80,11 +95,18 @@ abstract class FilesystemManager
             $completedDownloadsFolders = $this->getCompletedDownloadsFolders($downloads);
 
             foreach ($this->getAllDownloadsFolderFinder($downloadPath)->getIterator() as $folder) {
-                if (!$this->isFolderInCollection($folder, $foldersToRemove, true, $downloadPath) &&
-                    !$this->isFolderInCollection($folder, $completedDownloadsFolders)
-                ) {
-                    $foldersToRemove->add($folder);
+
+                // If the folder has already been tagged for removal, we skip it
+                if ($this->isFolderInCollection($folder, $foldersToRemove, true, $downloadPath)) {
+                    continue;
                 }
+
+                // If the folder contains downloaded files, we skip it
+                if ($this->isFolderInCollection($folder, $completedDownloadsFolders)) {
+                    continue;
+                }
+
+                $foldersToRemove->add($folder);
             }
         } catch (\LogicException $e) {
             // Here we know that the download folder will exist.
@@ -99,7 +121,7 @@ abstract class FilesystemManager
      * @param \SplFileInfo $folderToSearchFor
      * @param \App\Filesystem\FilesystemObjects $folders
      * @param bool $loopOverParentsFolders
-     * @param \App\Domain\Collection\Path $untilPath
+     * @param \App\Domain\Path $untilPath
      *
      * @return bool
      * @throws \RuntimeException
@@ -171,7 +193,7 @@ abstract class FilesystemManager
     }
 
     /**
-     * @param \App\Domain\Collection\Downloads $downloads
+     * @param \App\Domain\Downloads $downloads
      *
      * @return \App\Filesystem\FilesystemObjects
      */
@@ -192,7 +214,7 @@ abstract class FilesystemManager
 
     /**
      * @param \App\Filesystem\FilesystemObjects $foldersToRemove
-     * @param \App\Domain\Collection\Path $downloadPath
+     * @param \App\Domain\Path $downloadPath
      *
      * @return bool
      */
@@ -255,7 +277,7 @@ abstract class FilesystemManager
 
         $this->ui->write($this->ui->indent());
 
-        if ($this->skip() || !$this->ui->confirm($confirmationDefault)) {
+        if ($this->skip($this->ui) || !$this->ui->confirm($confirmationDefault)) {
             $this->ui->writeln(($this->ui->isDryRun() ? '' : PHP_EOL).'<info>Done.</info>'.PHP_EOL);
 
             return false;

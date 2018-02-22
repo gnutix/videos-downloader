@@ -1,8 +1,8 @@
 <?php declare(strict_types=1);
 
-namespace App\Domain\Collection;
+namespace App\Domain;
 
-use App\Domain\Content;
+use App\Collection\Collection;
 use Doctrine\Common\Collections\Criteria;
 
 /**
@@ -22,7 +22,6 @@ use Doctrine\Common\Collections\Criteria;
  * @method Content[]|Contents map(\Closure $p)
  * @method Content[]|Contents filter(\Closure $p)
  * @method Contents[] partition(\Closure $p)
- * @method Content[]|Contents slice($offset, $length = null)
  * @method Content[]|Contents matching(Criteria $criteria)
  */
 final class Contents extends Collection

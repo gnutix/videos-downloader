@@ -1,8 +1,7 @@
 <?php declare(strict_types=1);
 
-namespace App\Cli;
+namespace App\UI;
 
-use App\UI\UserInterface;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
@@ -34,6 +33,10 @@ final class CommandLineInterface implements UserInterface
         $this->command = $command;
         $this->input = $input;
         $this->output = $output;
+
+        if ($dryRun) {
+            $input->setInteractive(false);
+        }
     }
 
     /**

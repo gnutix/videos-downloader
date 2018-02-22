@@ -2,7 +2,7 @@
 
 namespace App\Filesystem;
 
-use App\Domain\Collection\Collection;
+use App\Collection\Collection;
 use Doctrine\Common\Collections\Criteria;
 
 /**
@@ -27,7 +27,6 @@ use Doctrine\Common\Collections\Criteria;
  * @method \SplFileInfo[]|FilesystemObjects map(\Closure $p)
  * @method \SplFileInfo[]|FilesystemObjects filter(\Closure $p)
  * @method FilesystemObjects[] partition(\Closure $p)
- * @method \SplFileInfo[]|FilesystemObjects slice($offset, $length = null)
  * @method \SplFileInfo[]|FilesystemObjects matching(Criteria $criteria)
  */
 final class FilesystemObjects extends Collection

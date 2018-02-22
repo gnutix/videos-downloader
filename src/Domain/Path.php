@@ -1,8 +1,8 @@
 <?php declare(strict_types=1);
 
-namespace App\Domain\Collection;
+namespace App\Domain;
 
-use App\Domain\PathPart;
+use App\Collection\Collection;
 use Doctrine\Common\Collections\Criteria;
 
 /**
@@ -24,7 +24,6 @@ use Doctrine\Common\Collections\Criteria;
  * @method PathPart[]|Path map(\Closure $p)
  * @method PathPart[]|Path filter(\Closure $p)
  * @method Path[] partition(\Closure $p)
- * @method PathPart[]|Path slice($offset, $length = null)
  * @method PathPart[]|Path matching(Criteria $criteria)
  */
 final class Path extends Collection
@@ -37,10 +36,23 @@ final class Path extends Collection
         return implode(
             DIRECTORY_SEPARATOR,
             $this->matching(Criteria::create()->orderBy(array('priority' => Criteria::ASC)))
+                ->filter(function (PathPart $pathPart) {
+                    return !empty($pathPart->getPath());
+                })
                 ->map(function (PathPart $pathPart) {
                     return $pathPart->getPath();
                 })
                 ->toArray()
         );
+    }
+
+    /**
+     * @param Path $path
+     *
+     * @return Path
+     */
+    public static function createFromPath(Path $path): Path
+    {
+        return clone $path;
     }
 }
