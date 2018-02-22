@@ -1,6 +1,6 @@
 <?php declare(strict_types=1);
 
-namespace Extension\YouTube\Exception;
+namespace Extension\YouTubeDl\Exception;
 
 use YoutubeDl\Exception\YoutubeDlException;
 

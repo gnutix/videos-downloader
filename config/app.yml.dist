@@ -11,5 +11,5 @@ sources:
                 board_id: ~ # this needs to be filled in!
             downloaders:
                 -
-                    Extension\YouTube\YouTube:
+                    Extension\YouTubeDl\YouTubeDl:
                         config: []

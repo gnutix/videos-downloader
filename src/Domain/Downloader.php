@@ -78,14 +78,14 @@ abstract class Downloader extends FilesystemManager
     /**
      * @param \App\Domain\Downloads $downloads
      *
-     * @return \Extension\YouTube\Downloads
+     * @return \App\Domain\Downloads
      */
     abstract protected function filterAlreadyDownloaded(Downloads $downloads): Downloads;
 
     /**
      * @param \App\Domain\Content $content
      *
-     * @return \Extension\YouTube\Downloads
+     * @return \App\Domain\Downloads
      */
     abstract protected function extractDownloads(Content $content): Downloads;
 

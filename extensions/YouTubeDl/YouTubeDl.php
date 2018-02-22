@@ -1,6 +1,6 @@
 <?php declare(strict_types=1);
 
-namespace Extension\YouTube;
+namespace Extension\YouTubeDl;
 
 use App\Domain\Content;
 use App\Domain\Downloader;
@@ -8,10 +8,10 @@ use App\Domain\Path;
 use App\Domain\Download as DownloadInterface;
 use App\Domain\Downloads as DownloadsInterface;
 use App\Domain\PathPart;
-use Extension\YouTube\Exception as YouTubeException;
+use Extension\YouTubeDl\Exception as YouTubeException;
 use Symfony\Component\Filesystem\Filesystem;
 
-final class YouTube extends Downloader
+final class YouTubeDl extends Downloader
 {
     /**
      * {@inheritdoc}
@@ -31,7 +31,7 @@ final class YouTube extends Downloader
 
     /**
      * {@inheritdoc}
-     * @param \Extension\YouTube\Download $download
+     * @param \Extension\YouTubeDl\Download $download
      */
     protected function getDownloadFolder(DownloadInterface $download): string
     {
@@ -181,7 +181,7 @@ final class YouTube extends Downloader
     }
 
     /**
-     * @param \Extension\YouTube\Download $download
+     * @param \Extension\YouTubeDl\Download $download
      * @param array $downloadOptions
      *
      * @throws \Exception
@@ -226,7 +226,7 @@ final class YouTube extends Downloader
     }
 
     /**
-     * @param \Extension\YouTube\Download $download
+     * @param \Extension\YouTubeDl\Download $download
      *
      * @return array
      */
