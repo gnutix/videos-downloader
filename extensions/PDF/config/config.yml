@@ -1,7 +1,4 @@
-path_part:
-    path: PDFs
-    priority: -50
-
+---
 extractor:
     regex: >-
         ~

@@ -50,12 +50,12 @@ final class Trello implements Source
             /** @var \Extension\Trello\PhpDoc\TrelloClient $client */
             $client = new Client(['token' => $this->config['api_key']]);
             $trelloLists = $client->getBoardLists($this->config['board_id']);
-            $trelloCards = $client->getBoardCards($this->config['board_id']);
+            $trelloCards = $client->getBoardCards($this->config['board_id'], ['attachments' => true]);
         } catch (Exception $e) {
             $this->ui->writeln(
                 sprintf(
                     '<error>Could not fetch the information from Trello!</error>%s<error>%s</error>'.PHP_EOL,
-                    PHP_EOL.PHP_EOL.'    ',
+                    PHP_EOL.PHP_EOL.$this->ui->indent(2),
                     $e->getMessage()
                 )
             );
@@ -68,6 +68,11 @@ final class Trello implements Source
         $pathPartConfig = $this->config['path_part'];
 
         foreach ($trelloCards as $card) {
+            $data = [$card->desc];
+            foreach ($card->attachments as $attachment) {
+                $data[] = $attachment->url;
+            }
+
             $pathPartConfig['substitutions'] = [
                 // Here we remove any directory separator in the list/song name to avoid unwanted nested folders.
                 // Ex: "Songs/AC/DC - Hells Bells" would give "Songs/AC/DC/Hells Bells".
@@ -75,7 +80,7 @@ final class Trello implements Source
                 '%card_name%' => str_replace(DIRECTORY_SEPARATOR, '', $card->name)
             ] + ($pathPartConfig['substitutions'] ?? []);
 
-            $contents->add(new Content($card->desc, new Path([new PathPart($pathPartConfig)])));
+            $contents->add(new Content(implode(PHP_EOL, $data), new Path([new PathPart($pathPartConfig)])));
         }
 
         $this->ui->writeln('<info>Done.</info>');

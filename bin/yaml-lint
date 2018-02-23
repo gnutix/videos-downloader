@@ -2,20 +2,40 @@
 <?php
 require __DIR__.'/../vendor/autoload.php';
 
+use Symfony\Component\Console\Input\ArgvInput;
+use Symfony\Component\Console\Input\InputInterface;
+use Symfony\Component\Console\Output\ConsoleOutput;
+use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Yaml\Command\LintCommand;
 use Symfony\Component\Console\Application;
 
-$command = new class('yaml:lint') extends LintCommand
-{
-    protected function configure(): void
+$exitCodes = [];
+foreach (['config', 'extensions'] as $folder) {
+    $command = new class($folder) extends LintCommand
     {
-        parent::configure();
-        $this->getDefinition()->getArgument('filename')->setDefault('config/');
-    }
-};
+        protected function configure(): void
+        {
+            parent::configure();
+            $this->getDefinition()->getArgument('filename')->setDefault($this->getName());
+        }
 
-$application = (new Application())
-    ->add($command)
-    ->getApplication()
-    ->setDefaultCommand($command->getName(), true)
-    ->run();
+        protected function execute(InputInterface $input, OutputInterface $output)
+        {
+            $output->writeln(sprintf('Executing yaml:lint on folder "%s/".', $this->getName()));
+
+            parent::execute($input, $output);
+        }
+    };
+
+    $input = new ArgvInput();
+    $output = new ConsoleOutput();
+
+    $application = (new Application())
+        ->add($command)
+        ->getApplication()
+        ->setDefaultCommand($command->getName(), true);
+    $application->setAutoExit(false);
+    $exitCodes[] = $application->doRun($input, $output);
+}
+
+exit(array_sum($exitCodes) === 0 ? 0 : 1);

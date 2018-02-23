@@ -16,9 +16,10 @@ abstract class TrelloClient extends Client
 
     /**
      * @param string $boardId
+     * @param array $parameters
      *
      * @return \Extension\Trello\PhpDoc\TrelloCard[]
      * @throws \Stevenmaguire\Services\Trello\Exceptions\Exception
      */
-    abstract public function getBoardCards(string $boardId): array;
+    abstract public function getBoardCards(string $boardId, array $parameters = []): array;
 }

@@ -44,7 +44,7 @@ final class Kernel
 
                         /** @var \App\Domain\Downloader $downloader */
                         $downloader = new $downloaderClassName($ui, $downloaderData['config'] ?? []);
-                        $downloader->synchronizeContents($contents, $rootPathPart);
+                        $downloader->synchronizeContents(clone $contents, $rootPathPart);
                     }
                 }
             }

@@ -10,7 +10,6 @@ use App\Domain\Downloads as DownloadsInterface;
 use App\Domain\PathPart;
 use GuzzleHttp\Client;
 use Symfony\Component\Filesystem\Filesystem;
-use Symfony\Component\Finder\Finder;
 
 final class PDF extends Downloader
 {
@@ -35,17 +34,9 @@ final class PDF extends Downloader
      *
      * @return string
      */
-    protected function getDownloadFolder(DownloadInterface $download): string
+    private function getDownloadFolder(DownloadInterface $download): string
     {
         return pathinfo((string) $download->getPath(), PATHINFO_DIRNAME);
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    protected function getDownloadFolderFinder(DownloadInterface $download): Finder
-    {
-        return parent::getDownloadFolderFinder($download)->name('*.pdf');
     }
 
     /**
@@ -58,7 +49,10 @@ final class PDF extends Downloader
         if (preg_match_all($this->config['extractor']['regex'], $content->getData(), $matches)) {
             foreach ((array) $matches[$this->config['extractor']['pdf_url_index']] as $pdfLink) {
                 $path = Path::createFromPath($content->getPath());
-                $path->add(new PathPart(['path' => pathinfo($pdfLink, PATHINFO_BASENAME)]));
+                $path->add(new PathPart([
+                    'path' => pathinfo(urldecode($pdfLink), PATHINFO_BASENAME),
+                    'priority' => 255,
+                ]));
 
                 $downloads->add(new Download($pdfLink, $path));
             }
@@ -79,6 +73,7 @@ final class PDF extends Downloader
 
     /**
      * {@inheritdoc}
+     * @param \Extension\PDF\Downloads|DownloadsInterface $downloads
      */
     protected function download(DownloadsInterface $downloads, Path $downloadPath): void
     {
@@ -86,9 +81,9 @@ final class PDF extends Downloader
         foreach ($downloads as $download) {
             $this->ui->write(
                 sprintf(
-                    '%s* Download the PDF file in <info>%s</info>... ',
+                    '%s* Download the PDF file <info>%s</info>... ',
                     $this->ui->indent(2),
-                    (string) $downloadPath
+                    str_replace((string) $downloadPath.DIRECTORY_SEPARATOR, '', (string) $download->getPath())
                 )
             );
 

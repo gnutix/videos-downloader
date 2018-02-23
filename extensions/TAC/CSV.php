@@ -10,9 +10,8 @@ use App\Domain\Source;
 use App\UI\UserInterface;
 use League\Csv\Exception;
 use League\Csv\Reader;
-use Symfony\Component\Yaml\Yaml;
 
-final class TAC implements Source
+final class CSV implements Source
 {
     private const TAC_URL = 'https://tonypolecastro.com/';
 
@@ -30,13 +29,10 @@ final class TAC implements Source
     public function __construct(UserInterface $ui, array $config = [])
     {
         $this->ui = $ui;
-        $this->config = array_merge(
-            (array) Yaml::parseFile(__DIR__.DIRECTORY_SEPARATOR.'config/config.yml'),
-            $config
-        );
+        $this->config = $config;
 
         if (!isset($this->config['resources']) || empty($this->config['resources'])) {
-            throw new \RuntimeException('The resources must be provided for TAC source.');
+            throw new \RuntimeException('The resources must be provided for TAC CSV source.');
         }
     }
 
@@ -46,7 +42,7 @@ final class TAC implements Source
      */
     public function getContents(): Contents
     {
-        $this->ui->write('Fetch the contents from the CSV... ');
+        $this->ui->write('Fetch the contents from the TAC CSV files... ');
         $contents = new Contents();
         $separator = '; ';
 

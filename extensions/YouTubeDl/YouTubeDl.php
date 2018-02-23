@@ -10,6 +10,7 @@ use App\Domain\Downloads as DownloadsInterface;
 use App\Domain\PathPart;
 use Extension\YouTubeDl\Exception as YouTubeException;
 use Symfony\Component\Filesystem\Filesystem;
+use Symfony\Component\Finder\Finder;
 
 final class YouTubeDl extends Downloader
 {
@@ -30,10 +31,11 @@ final class YouTubeDl extends Downloader
     }
 
     /**
-     * {@inheritdoc}
-     * @param \Extension\YouTubeDl\Download $download
+     * @param \Extension\YouTubeDl\Download|DownloadInterface $download
+     *
+     * @return string
      */
-    protected function getDownloadFolder(DownloadInterface $download): string
+    private function getDownloadFolder(DownloadInterface $download): string
     {
         $downloadPathPart = new PathPart([
             'path' => (string) $download->getPath(),
@@ -97,7 +99,7 @@ final class YouTubeDl extends Downloader
                 try {
                     $placeholders = $this->getDownloadPlaceholders($download);
 
-                    $downloadFinder = $this->getDownloadFolderFinder($download);
+                    $downloadFinder = $this->getDownloadFileFinder($download);
                     $downloadFinder->name(
                         str_replace(
                             array_keys($placeholders),
@@ -119,7 +121,22 @@ final class YouTubeDl extends Downloader
     }
 
     /**
+     * @param \Extension\YouTubeDl\Download|DownloadInterface $download
+     *
+     * @return \Symfony\Component\Finder\Finder|\SplFileInfo[]
+     * @throws \InvalidArgumentException
+     */
+    protected function getDownloadFileFinder(DownloadInterface $download): Finder
+    {
+        return (new Finder())
+            ->files()
+            ->depth('== 0')
+            ->in($this->getDownloadFolder($download));
+    }
+
+    /**
      * {@inheritdoc}
+     * @param \Extension\YouTubeDl\Downloads|DownloadsInterface $downloads
      */
     protected function download(DownloadsInterface $downloads, Path $downloadPath): void
     {
@@ -132,7 +149,7 @@ final class YouTubeDl extends Downloader
                     $download->getVideoId(),
                     $download->getFileType(),
                     $download->getFileExtension(),
-                    str_replace((string) $downloadPath.DIRECTORY_SEPARATOR, '', $download->getPath())
+                    str_replace((string) $downloadPath.DIRECTORY_SEPARATOR, '', (string) $download->getPath())
                 )
             );
 

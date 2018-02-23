@@ -1,8 +1,4 @@
 ---
-path_part:
-    path: 'YouTubeDl'
-    priority: -50
-
 # the keys should match those of "youtube_dl.options"
 download_files:
     audio: mp3
