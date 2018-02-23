@@ -145,10 +145,29 @@ final class FilesystemCleaner
             return true;
         }
 
-        $confirmationDefault = true;
+        $confirmationDefault = $this->previewRemovalOfFolders($foldersToRemove, $downloadPath);
 
-        // If there's less than 10 folders, we can display them
+        $this->ui->write($this->ui->indent());
+
+        if ($this->skip($this->ui) || !$this->ui->confirm($confirmationDefault)) {
+            $this->ui->writeln(($this->ui->isDryRun() ? '' : PHP_EOL).'<info>Done.</info>'.PHP_EOL);
+
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * @param \App\Filesystem\FilesystemObjects $foldersToRemove
+     * @param \App\Domain\Path $downloadPath
+     *
+     * @return bool Returns whether or not the confirmation default should be true or false
+     */
+    private function previewRemovalOfFolders(FilesystemObjects $foldersToRemove, Path $downloadPath): bool
+    {
         $nbFoldersToRemove = $foldersToRemove->count();
+
         if ($nbFoldersToRemove <= 10) {
             $this->ui->writeln(
                 sprintf(
@@ -168,27 +187,19 @@ final class FilesystemCleaner
                     ->toArray(),
                 3
             );
-        } else {
-            $confirmationDefault = false;
 
-            $this->ui->write(
-                sprintf(
-                    '%sThe script is about to remove <question> %s </question> folders from <info>%s</info>. ',
-                    $this->ui->indent(),
-                    $nbFoldersToRemove,
-                    (string) $downloadPath
-                )
-            );
+            return true;
         }
 
-        $this->ui->write($this->ui->indent());
+        $this->ui->write(
+            sprintf(
+                '%sThe script is about to remove <question> %s </question> folders from <info>%s</info>. ',
+                $this->ui->indent(),
+                $nbFoldersToRemove,
+                (string) $downloadPath
+            )
+        );
 
-        if ($this->skip($this->ui) || !$this->ui->confirm($confirmationDefault)) {
-            $this->ui->writeln(($this->ui->isDryRun() ? '' : PHP_EOL).'<info>Done.</info>'.PHP_EOL);
-
-            return false;
-        }
-
-        return true;
+        return false;
     }
 }
