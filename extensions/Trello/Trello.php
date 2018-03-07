@@ -10,6 +10,7 @@ use App\Domain\Source;
 use App\UI\UserInterface;
 use Stevenmaguire\Services\Trello\Client;
 use Stevenmaguire\Services\Trello\Exceptions\Exception;
+use Symfony\Component\PropertyAccess\PropertyAccess;
 use Symfony\Component\Yaml\Yaml;
 
 final class Trello implements Source
@@ -33,13 +34,18 @@ final class Trello implements Source
             $config
         );
 
-        if (!isset($this->config['board_id']) || empty($this->config['board_id'])) {
-            throw new \RuntimeException('The board_id must be provided for Trello source.');
+        foreach (['board_id', 'card_properties'] as $key) {
+            if (!isset($this->config[$key]) || empty($this->config[$key])) {
+                throw new \RuntimeException(sprintf('The "%s" config key must be provided for Trello source.', $key));
+            }
         }
     }
 
     /**
      * {@inheritdoc}
+     * @throws \Symfony\Component\PropertyAccess\Exception\UnexpectedTypeException
+     * @throws \Symfony\Component\PropertyAccess\Exception\AccessException
+     * @throws \Symfony\Component\PropertyAccess\Exception\InvalidArgumentException
      */
     public function getContents(): Contents
     {
@@ -67,20 +73,34 @@ final class Trello implements Source
         $lists = array_combine(array_column($trelloLists, 'id'), $trelloLists);
         $pathPartConfig = $this->config['path_part'];
 
-        foreach ($trelloCards as $card) {
+        $propertyAccessor = PropertyAccess::createPropertyAccessor();
+        $indexId = '[%index%]';
+        $indexIdLength = \strlen($indexId);
 
-            // Get the contents using the description of the card and the attachments
-            $data = [$card->desc];
-            foreach ($card->attachments as $attachment) {
-                $data[] = $attachment->url;
+        // Decode the stdClass object to an array to be used with PropertyAccess
+        foreach (json_decode(json_encode($trelloCards), true) as $card) {
+
+            // Get the contents from the card
+            $data = [];
+            foreach ((array) $this->config['card_properties'] as $property) {
+                if (false === ($indexIdPosition = strpos($property, '[%index%]'))) {
+                    $data[] = $propertyAccessor->getValue($card, $property);
+                } else {
+                    $rootProperty = substr($property, 0, $indexIdPosition);
+                    $subProperties = substr($property, $indexIdPosition + $indexIdLength);
+
+                    foreach ((array) $propertyAccessor->getValue($card, $rootProperty) as $propertyValues) {
+                        $data[] = $propertyAccessor->getValue($propertyValues, $subProperties);
+                    }
+                }
             }
 
             $pathPartConfig['substitutions'] = [
                 // Here we remove any directory separator in the list/song name to avoid unwanted nested folders.
                 // And we remove some characters that are not liked by filesystems too.
                 // Ex: "Songs/AC/DC - Hells Bells" would give "Songs/AC/DC/Hells Bells".
-                '%list_name%' => $this->cleanPath($lists[$card->idList]->name),
-                '%card_name%' => $this->cleanPath($card->name)
+                '%list_name%' => $this->cleanPath($lists[$card['idList']]->name),
+                '%card_name%' => $this->cleanPath($card['name'])
             ] + ($pathPartConfig['substitutions'] ?? []);
 
             $contents->add(new Content(implode(PHP_EOL, $data), new Path([new PathPart($pathPartConfig)])));

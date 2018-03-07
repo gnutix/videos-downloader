@@ -18,7 +18,8 @@
 
         "stevenmaguire/trello-php": "^0.4.1",
         "norkunas/youtube-dl-php": "^1.0",
-        "league/csv": "^9.0"
+        "league/csv": "^9.0",
+        "symfony/property-access": "^4.0"
     },
     "require-dev": {
         "symfony/var-dumper": "^4.0"

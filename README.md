@@ -57,6 +57,9 @@ sources:
         Extension\Trello\Trello:
             config:
                 board_id: MkYHGxzY
+                card_properties:
+                    - '[desc]'
+                    - '[attachments][%index%][url]'
             downloaders:
                 -
                     Extension\File\File:

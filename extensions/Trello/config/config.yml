@@ -5,6 +5,11 @@ api_key: beb1cf49bfceca0ea4f7dc063fe54f37
 # can be fetched from a board's URL: https://trello.com/b/XXXXX/
 board_id: ~
 
+# this uses the Symfony PropertyAccess syntax, with an extra feature :
+# "[%index%]" is a custom syntax sugar that allows to loop through multiple entries and fetch its nested properties
+# it can only be used once per selector ("[attachments][%index][previews][%index%][xxx]" won't work)
+card_properties: ~
+
 path_part:
     # available variables: %list_name%, %card_name%
     path: '%list_name%/%card_name%'
