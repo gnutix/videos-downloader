@@ -1,0 +1,8 @@
+---
+base_url: ~
+delimiter: ','
+resources: ~ # available variables: %extension_path%
+base_url_column: 0
+columns: [1, 2]
+path_part:
+    path: '%base_url_path%'

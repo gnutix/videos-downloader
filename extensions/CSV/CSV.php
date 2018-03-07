@@ -1,6 +1,6 @@
 <?php declare(strict_types=1);
 
-namespace Extension\TAC;
+namespace Extension\CSV;
 
 use App\Domain\Contents;
 use App\Domain\Path;
@@ -10,11 +10,10 @@ use App\Domain\Source;
 use App\UI\UserInterface;
 use League\Csv\Exception;
 use League\Csv\Reader;
+use Symfony\Component\Yaml\Yaml;
 
 final class CSV implements Source
 {
-    private const TAC_URL = 'https://tonypolecastro.com/';
-
     /** @var \App\UI\UserInterface */
     private $ui;
 
@@ -29,10 +28,15 @@ final class CSV implements Source
     public function __construct(UserInterface $ui, array $config = [])
     {
         $this->ui = $ui;
-        $this->config = $config;
+        $this->config = array_merge(
+            (array) Yaml::parseFile(__DIR__.DIRECTORY_SEPARATOR.'config/config.yml'),
+            $config
+        );
 
-        if (!isset($this->config['resources']) || empty($this->config['resources'])) {
-            throw new \RuntimeException('The resources must be provided for TAC CSV source.');
+        foreach (['resources', 'base_url'] as $key) {
+            if (!isset($this->config[$key]) || empty($this->config[$key])) {
+                throw new \RuntimeException(sprintf('The "%s" config key must be provided for TAC CSV source.', $key));
+            }
         }
     }
 
@@ -44,7 +48,6 @@ final class CSV implements Source
     {
         $this->ui->write('Fetch the contents from the TAC CSV files... ');
         $contents = new Contents();
-        $separator = '; ';
 
         foreach ((array) $this->config['resources'] as $resource) {
             $filePath = str_replace('%extension_path%', __DIR__, $resource);
@@ -53,9 +56,10 @@ final class CSV implements Source
                 throw new \RuntimeException(sprintf('The resource "%s" does not exist.', $filePath));
             }
 
-            /** @var \League\Csv\Reader $csv */
             try {
+                /** @var \League\Csv\Reader $csv */
                 $csv = Reader::createFromPath($filePath);
+                $csv->setDelimiter($this->config['delimiter'] ?? ',');
                 $csv->setHeaderOffset(0);
 
                 foreach ($csv->getRecords() as $record) {
@@ -63,10 +67,12 @@ final class CSV implements Source
                     // Remove headers as keys so it's more flexible
                     $record = array_values($record);
 
-                    // Concatenate the content of the second (pdf links) and third columns (video links)
-                    $data = str_replace($separator, PHP_EOL, $record[1].$separator.$record[2]);
+                    $data = [];
+                    foreach ((array) $this->config['columns'] as $column) {
+                        $data[] = $record[$column];
+                    }
 
-                    $contents->add(new Content($data, $this->generatePath($record)));
+                    $contents->add(new Content(implode(PHP_EOL, $data), $this->generatePath($record)));
                 }
             } catch (Exception $e) {
                 throw new \RuntimeException(sprintf('The resource "%s" could not be parsed.', $filePath));
@@ -87,8 +93,15 @@ final class CSV implements Source
     {
         $pathPartConfig = $this->config['path_part'] ?? [];
         $pathPartConfig['path'] = str_replace(
-            '%lesson_url_path%',
-            trim(str_replace(static::TAC_URL, '', $record[0]), DIRECTORY_SEPARATOR),
+            '%base_url_path%',
+            trim(
+                str_replace(
+                    $this->config['base_url'],
+                    '',
+                    $record[$this->config['base_url_column']]
+                ),
+                DIRECTORY_SEPARATOR
+            ),
             $pathPartConfig['path'] ?? ''
         );
 
