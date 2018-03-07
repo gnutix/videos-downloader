@@ -43,6 +43,57 @@ bin/app
 
 Congratulations! The `downloads/` folder should be full of files now... ;)
 
+### Examples of configuration files
+
+Here's one I use to download songs from my Trello repertoire board, along with tabs :
+
+```yaml
+path_part:
+    path: '/home/gnutix/Music/Repertoire'
+    priority: -255
+
+sources:
+    -
+        Extension\Trello\Trello:
+            config:
+                board_id: MkYHGxzY
+            downloaders:
+                -
+                    Extension\File\File:
+                        config:
+                            extensions: '(?:pdf|mp3)'
+                -
+                    Extension\YouTubeDl\YouTubeDl: ~
+```
+
+Here's another I use to download files from a website for which I have a paid account and extracted a list of URLs
+(in data.csv) containing the videos :
+
+```yaml
+path_part:
+    path: '/home/gnutix/Downloads/QLRR'
+    priority: -255
+
+sources:
+    -
+        Extension\CSV\CSV:
+            config:
+                base_url: 'https://qlrr.fr/6/qlrr/'
+                resources:
+                    - '/home/gnutix/Downloads/QLRR/data.csv'
+            downloaders:
+                -
+                    Extension\File\File:
+                        config:
+                            extensions: '(?:pdf|mp4)'
+                -
+                    Extension\YouTubeDl\YouTubeDl:
+                        config:
+                            referer: 'https://qlrr.fr/6/'
+                            download_files:
+                                video: mp4
+```
+
 ### Some tips for analyzing the downloaded files
 
 Display the number of files by extension :
