@@ -157,6 +157,12 @@ final class YouTubeDl extends Downloader
 
             // Override "youtube_dl.options" by the downloaders' specific youtube-dl's options
             foreach ($config as $pass => $values) {
+
+                // Add the referer
+                if (isset($this->config['referer'])) {
+                    $values['referer'] = $this->config['referer'];
+                }
+
                 $config[$pass] = array_merge(
                     $this->config['downloaders'][$download->getPlatform()]['downloader']['youtube_dl']['options'],
                     $values
