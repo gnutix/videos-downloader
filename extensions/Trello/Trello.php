@@ -68,6 +68,8 @@ final class Trello implements Source
         $pathPartConfig = $this->config['path_part'];
 
         foreach ($trelloCards as $card) {
+
+            // Get the contents using the description of the card and the attachments
             $data = [$card->desc];
             foreach ($card->attachments as $attachment) {
                 $data[] = $attachment->url;
@@ -75,9 +77,10 @@ final class Trello implements Source
 
             $pathPartConfig['substitutions'] = [
                 // Here we remove any directory separator in the list/song name to avoid unwanted nested folders.
+                // And we remove some characters that are not liked by filesystems too.
                 // Ex: "Songs/AC/DC - Hells Bells" would give "Songs/AC/DC/Hells Bells".
-                '%list_name%' => str_replace(DIRECTORY_SEPARATOR, '', $lists[$card->idList]->name),
-                '%card_name%' => str_replace(DIRECTORY_SEPARATOR, '', $card->name)
+                '%list_name%' => $this->cleanPath($lists[$card->idList]->name),
+                '%card_name%' => $this->cleanPath($card->name)
             ] + ($pathPartConfig['substitutions'] ?? []);
 
             $contents->add(new Content(implode(PHP_EOL, $data), new Path([new PathPart($pathPartConfig)])));
@@ -86,5 +89,18 @@ final class Trello implements Source
         $this->ui->writeln('<info>Done.</info>');
 
         return $contents;
+    }
+
+    /**
+     * @param string $string
+     *
+     * @return string
+     */
+    private function cleanPath(string $string): string
+    {
+        $chars = [DIRECTORY_SEPARATOR, '#', '%', '{', '}', '\\', '<', '>', '*', '?', '$', '!', ':', '@'];
+        $sanitizedString = str_replace($chars, '', $string);
+
+        return (string) str_replace('&', 'and', $sanitizedString);
     }
 }
