@@ -1,6 +1,6 @@
 <?php declare(strict_types=1);
 
-namespace Extension\PDF;
+namespace Extension\File;
 
 use App\Domain\Path;
 use App\Domain\Download as DownloadInterface;

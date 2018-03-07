@@ -1,6 +1,6 @@
 <?php declare(strict_types=1);
 
-namespace Extension\PDF;
+namespace Extension\File;
 
 use App\Domain\Downloader;
 use App\Domain\Path;
@@ -11,7 +11,7 @@ use App\Domain\PathPart;
 use GuzzleHttp\Client;
 use Symfony\Component\Filesystem\Filesystem;
 
-final class PDF extends Downloader
+final class File extends Downloader
 {
     /**
      * {@inheritdoc}
@@ -30,7 +30,7 @@ final class PDF extends Downloader
     }
 
     /**
-     * @param \Extension\PDF\Download|DownloadInterface $download
+     * @param \Extension\File\Download|DownloadInterface $download
      *
      * @return string
      */
@@ -41,20 +41,27 @@ final class PDF extends Downloader
 
     /**
      * {@inheritdoc}
+     * @throws \RuntimeException
      */
     protected function extractDownloads(Content $content): DownloadsInterface
     {
         $downloads = new Downloads();
 
-        if (preg_match_all($this->config['extractor']['regex'], $content->getData(), $matches)) {
-            foreach ((array) $matches[$this->config['extractor']['pdf_url_index']] as $pdfLink) {
+        if (empty($this->config['extensions'])) {
+            throw new \RuntimeException('The "extensions" configuration key is mandatory.');
+        }
+
+        $regex = str_replace('%extensions%', $this->config['extensions'], $this->config['extractor']['regex']);
+
+        if (preg_match_all($regex, $content->getData(), $matches)) {
+            foreach ((array) $matches[$this->config['extractor']['url_index']] as $url) {
                 $path = Path::createFromPath($content->getPath());
                 $path->add(new PathPart([
-                    'path' => pathinfo(urldecode($pdfLink), PATHINFO_BASENAME),
+                    'path' => pathinfo(urldecode($url), PATHINFO_BASENAME),
                     'priority' => 255,
                 ]));
 
-                $downloads->add(new Download($pdfLink, $path));
+                $downloads->add(new Download($url, $path));
             }
         }
 
@@ -73,7 +80,7 @@ final class PDF extends Downloader
 
     /**
      * {@inheritdoc}
-     * @param \Extension\PDF\Downloads|DownloadsInterface $downloads
+     * @param \Extension\File\Downloads|DownloadsInterface $downloads
      */
     protected function download(DownloadsInterface $downloads, Path $downloadPath): void
     {
@@ -81,7 +88,7 @@ final class PDF extends Downloader
         foreach ($downloads as $download) {
             $this->ui->write(
                 sprintf(
-                    '%s* Download the PDF file <info>%s</info>... ',
+                    '%s* Download the file <info>%s</info>... ',
                     $this->ui->indent(2),
                     str_replace((string) $downloadPath.DIRECTORY_SEPARATOR, '', (string) $download->getPath())
                 )
@@ -112,7 +119,7 @@ final class PDF extends Downloader
     }
 
     /**
-     * @param \Extension\PDF\Download|\App\Domain\Download $download
+     * @param \Extension\File\Download|\App\Domain\Download $download
      *
      * @throws \Symfony\Component\Filesystem\Exception\IOException
      */
