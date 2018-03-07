@@ -1,3 +1,6 @@
+/bin/
+!/bin/app
+!/bin/yaml-lint
 /config/
 !/config/app.yml.dist
 downloads
