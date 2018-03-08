@@ -58,11 +58,11 @@ final class Kernel
      */
     private function getProjectDir(): string
     {
-        if (!($projectRoot = getenv('PROJECT_ROOT'))) {
+        if (false !== ($projectRoot = getenv('PROJECT_ROOT'))) {
             throw new \RuntimeException('The environment variable "PROJECT_ROOT" has not been defined.');
         }
 
-        return rtrim($projectRoot, DIRECTORY_SEPARATOR);
+        return rtrim((string) $projectRoot, DIRECTORY_SEPARATOR);
     }
 
     /**
