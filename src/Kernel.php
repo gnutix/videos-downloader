@@ -12,6 +12,17 @@ final class Kernel
 {
     public const DEFAULT_CONFIG = 'config/app.yml';
 
+    /** @var string */
+    private $projectDir;
+
+    /**
+     * @param string $projectDir
+     */
+    public function __construct(string $projectDir)
+    {
+        $this->projectDir = rtrim($projectDir, DIRECTORY_SEPARATOR);
+    }
+
     /**
      * @param string $configFilePath
      * @param \App\UI\UserInterface $ui
@@ -52,20 +63,6 @@ final class Kernel
     }
 
     /**
-     * @return string
-     *
-     * @throws \RuntimeException
-     */
-    private function getProjectDir(): string
-    {
-        if (false !== ($projectRoot = getenv('PROJECT_ROOT'))) {
-            throw new \RuntimeException('The environment variable "PROJECT_ROOT" has not been defined.');
-        }
-
-        return rtrim((string) $projectRoot, DIRECTORY_SEPARATOR);
-    }
-
-    /**
      * @param array $config
      *
      * @return \App\Domain\PathPart
@@ -75,7 +72,7 @@ final class Kernel
      */
     private function getRootPathPart(array $config): PathPart
     {
-        $config['substitutions'] = ['%project_root%' => $this->getProjectDir()] + ($config['substitutions'] ?? []);
+        $config['substitutions'] = ['%project_root%' => $this->projectDir] + ($config['substitutions'] ?? []);
         $rootPathPart = new PathPart($config);
 
         // Try to create the root directory... 'cause if it fails, nothing will work.
@@ -96,6 +93,6 @@ final class Kernel
             return $configFilePath;
         }
 
-        return $this->getProjectDir().DIRECTORY_SEPARATOR.$configFilePath;
+        return $this->projectDir.DIRECTORY_SEPARATOR.$configFilePath;
     }
 }

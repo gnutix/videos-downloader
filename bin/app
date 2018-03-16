@@ -10,8 +10,6 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 
-putenv('PROJECT_ROOT='.dirname(__DIR__));
-
 $command = new class('app:run') extends Command
 {
     protected function configure(): void
@@ -25,7 +23,7 @@ $command = new class('app:run') extends Command
         $dryRun = (bool) $input->getOption('dry-run');
         $configFilePath = (string) $input->getOption('config');
 
-        (new Kernel)($configFilePath, new CommandLineInterface($dryRun, $this, $input, $output));
+        (new Kernel(dirname(__DIR__)))($configFilePath, new CommandLineInterface($dryRun, $this, $input, $output));
     }
 };
 
