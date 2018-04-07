@@ -35,7 +35,7 @@ final class CSV implements Source
 
         foreach (['resources', 'base_url'] as $key) {
             if (!isset($this->config[$key]) || empty($this->config[$key])) {
-                throw new \RuntimeException(sprintf('The "%s" config key must be provided for TAC CSV source.', $key));
+                throw new \RuntimeException(sprintf('The "%s" config key must be provided for CSV source.', $key));
             }
         }
     }
