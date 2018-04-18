@@ -92,19 +92,47 @@ final class CSV implements Source
     private function generatePath(array $record): Path
     {
         $pathPartConfig = $this->config['path_part'] ?? [];
-        $pathPartConfig['path'] = str_replace(
-            '%base_url_path%',
-            trim(
+        $pathPartConfig['substitutions'] = [
+            '%base_url_path%' => $this->cleanPath(trim(
                 str_replace(
                     $this->config['base_url'],
                     '',
                     $record[$this->config['base_url_column']]
                 ),
                 DIRECTORY_SEPARATOR
-            ),
-            $pathPartConfig['path'] ?? ''
-        );
+            )),
+        ] + ($pathPartConfig['substitutions'] ?? []);
 
         return new Path([new PathPart($pathPartConfig)]);
+    }
+
+    /**
+     * @todo Integrate into Path class ?
+     *
+     * @param string $string
+     *
+     * @return string
+     */
+    private function cleanPath(string $string): string
+    {
+        $chars = [
+            '&' => 'and',
+            DIRECTORY_SEPARATOR => '',
+            '\\' => '',
+            '#' => '',
+            '%' => '',
+            '{' => '',
+            '}' => '',
+            '<' => '',
+            '>' => '',
+            '*' => '',
+            '?' => '',
+            '$' => '',
+            '!' => '',
+            ':' => '',
+            '@' => '',
+        ];
+
+        return trim(str_replace(array_keys($chars), array_values($chars), $string));
     }
 }

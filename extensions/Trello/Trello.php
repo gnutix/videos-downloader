@@ -201,6 +201,8 @@ final class Trello implements Source
     }
 
     /**
+     * @todo Integrate into Path class ?
+     *
      * @param string $string
      *
      * @return string
@@ -225,6 +227,6 @@ final class Trello implements Source
             '@' => '',
         ];
 
-        return (string) str_replace(array_keys($chars), array_values($chars), $string);
+        return trim(str_replace(array_keys($chars), array_values($chars), $string));
     }
 }
