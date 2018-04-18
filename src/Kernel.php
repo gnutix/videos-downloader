@@ -41,14 +41,21 @@ final class Kernel
             : $this->getAllConfigFilesPaths();
 
         foreach ($configFilesPaths as $configFilePath) {
-            $ui->writeln(
+            $ui->write(
                 sprintf(
-                    'Processing configuration file "<info>%s</info>"...'.PHP_EOL,
+                    'Processing configuration file "<info>%s</info>"... ',
                     $this->getConfigRelativeFilePath($configFilePath)
                 )
             );
-
             $config = (array) Yaml::parseFile($configFilePath);
+            $config['enabled'] = $config['enabled'] ?? true;
+
+            if (!$config['enabled']) {
+                $ui->writeln('<info>Skipped.</info>'.PHP_EOL);
+                continue;
+            }
+            $ui->writeln(PHP_EOL);
+
             $rootPathPart = $this->getRootPathPart($config['path_part'] ?? []);
 
             foreach ((array) $config['sources'] as $sources) {

@@ -1,4 +1,6 @@
 ---
+enabled: true
+
 path_part:
     # available variables: %project_root%
     path: '%project_root%/downloads'

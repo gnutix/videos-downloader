@@ -69,10 +69,12 @@ sources:
                     Extension\YouTubeDl\YouTubeDl: ~
 ```
 
-Here's another I use to download files from a website for which I have a paid account and extracted a list of URLs
+Here's another I use to download files from a website for which I had a paid account and extracted a list of URLs
 (in data.csv) containing the videos :
 
 ```yaml
+enabled: false
+
 path_part:
     path: '/home/gnutix/Downloads/QLRR'
     priority: -255
@@ -97,7 +99,7 @@ sources:
                                 video: mp4
 ```
 
-### Some tips for analyzing the downloaded files
+### Some (mostly debug related) tips for analyzing the downloaded files
 
 Display the number of files by extension :
 
