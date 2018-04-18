@@ -6,14 +6,16 @@ use App\Domain\Content;
 use App\Domain\PathPart;
 use App\UI\UserInterface;
 use Symfony\Component\Filesystem\Filesystem;
+use Symfony\Component\Finder\Finder;
 use Symfony\Component\Yaml\Yaml;
 
 final class Kernel
 {
-    public const DEFAULT_CONFIG = 'config/app.yml';
-
     /** @var string */
     private $projectDir;
+
+    /** @var string */
+    private $configDir;
 
     /**
      * @param string $projectDir
@@ -21,45 +23,76 @@ final class Kernel
     public function __construct(string $projectDir)
     {
         $this->projectDir = rtrim($projectDir, DIRECTORY_SEPARATOR);
+        $this->configDir = $projectDir.DIRECTORY_SEPARATOR.'config';
     }
 
     /**
-     * @param string $configFilePath
      * @param \App\UI\UserInterface $ui
+     * @param string $singleConfigFilePath
      *
      * @throws \RuntimeException
      * @throws \Symfony\Component\Filesystem\Exception\IOException
      * @throws \Symfony\Component\Yaml\Exception\ParseException
      */
-    public function __invoke($configFilePath, UserInterface $ui): void
+    public function __invoke(UserInterface $ui, $singleConfigFilePath = ''): void
     {
-        $config = (array) Yaml::parseFile($this->getConfigAbsoluteFilePath($configFilePath));
-        $rootPathPart = $this->getRootPathPart($config['path_part'] ?? []);
+        $configFilesPaths = !empty($singleConfigFilePath)
+            ? [$this->getConfigAbsoluteFilePath($singleConfigFilePath)]
+            : $this->getAllConfigFilesPaths();
 
-        foreach ((array) $config['sources'] as $sources) {
-            foreach ((array) $sources as $sourceClassName => $sourceData) {
+        foreach ($configFilesPaths as $configFilePath) {
+            $ui->writeln(
+                sprintf(
+                    'Processing configuration file "<info>%s</info>"...'.PHP_EOL,
+                    $this->getConfigRelativeFilePath($configFilePath)
+                )
+            );
+            $ui->increaseGlobalIndent();
 
-                /** @var \App\Domain\Source $source */
-                $source = new $sourceClassName($ui, $sourceData['config'] ?? []);
+            $config = (array) Yaml::parseFile($configFilePath);
+            $rootPathPart = $this->getRootPathPart($config['path_part'] ?? []);
 
-                // Add the root path part to the contents' path
-                $contents = $source->getContents()
-                    ->map(function (Content $content) use ($rootPathPart) {
-                        $content->getPath()->add($rootPathPart);
+            foreach ((array) $config['sources'] as $sources) {
+                foreach ((array) $sources as $sourceClassName => $sourceData) {
 
-                        return $content;
-                    });
+                    /** @var \App\Domain\Source $source */
+                    $source = new $sourceClassName($ui, $sourceData['config'] ?? []);
 
-                foreach ((array) $sourceData['downloaders'] as $downloaders) {
-                    foreach ((array) $downloaders as $downloaderClassName => $downloaderData) {
+                    // Add the root path part to the contents' path
+                    $contents = $source->getContents()
+                        ->map(function (Content $content) use ($rootPathPart) {
+                            $content->getPath()->add($rootPathPart);
 
-                        /** @var \App\Domain\Downloader $downloader */
-                        $downloader = new $downloaderClassName($ui, $downloaderData['config'] ?? []);
-                        $downloader->synchronizeContents(clone $contents, $rootPathPart);
+                            return $content;
+                        });
+
+                    foreach ((array) $sourceData['downloaders'] as $downloaders) {
+                        foreach ((array) $downloaders as $downloaderClassName => $downloaderData) {
+
+                            /** @var \App\Domain\Downloader $downloader */
+                            $downloader = new $downloaderClassName($ui, $downloaderData['config'] ?? []);
+                            $downloader->synchronizeContents(clone $contents, $rootPathPart);
+                        }
                     }
                 }
             }
+
+            $ui->decreaseGlobalIndent();
         }
+    }
+
+    /**
+     * @return array
+     */
+    private function getAllConfigFilesPaths(): array
+    {
+        $paths = [];
+
+        foreach ((new Finder())->in($this->configDir)->files()->sortByName()->name('*.yml')->getIterator() as $file) {
+            $paths[] = $file->getRealPath();
+        }
+
+        return $paths;
     }
 
     /**
@@ -79,6 +112,16 @@ final class Kernel
         (new Filesystem())->mkdir($rootPathPart->getPath());
 
         return $rootPathPart;
+    }
+
+    /**
+     * @param string $configFilePath
+     *
+     * @return string
+     */
+    private function getConfigRelativeFilePath(string $configFilePath): string
+    {
+        return (string) str_replace($this->projectDir.DIRECTORY_SEPARATOR, '', $configFilePath);
     }
 
     /**

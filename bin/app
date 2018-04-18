@@ -15,7 +15,7 @@ $command = new class('app:run') extends Command
     protected function configure(): void
     {
         $this->addOption('dry-run', 'd', InputOption::VALUE_NONE, 'Execute the script as a dry run.')
-            ->addOption('config', 'c', InputOption::VALUE_REQUIRED, 'The configuration file.', Kernel::DEFAULT_CONFIG);
+            ->addOption('config', 'c', InputOption::VALUE_OPTIONAL, 'The configuration file.');
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): void
@@ -23,7 +23,7 @@ $command = new class('app:run') extends Command
         $dryRun = (bool) $input->getOption('dry-run');
         $configFilePath = (string) $input->getOption('config');
 
-        (new Kernel(dirname(__DIR__)))($configFilePath, new CommandLineInterface($dryRun, $this, $input, $output));
+        (new Kernel(dirname(__DIR__)))(new CommandLineInterface($dryRun, $this, $input, $output), $configFilePath);
     }
 };
 
