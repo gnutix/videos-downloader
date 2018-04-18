@@ -47,7 +47,6 @@ final class Kernel
                     $this->getConfigRelativeFilePath($configFilePath)
                 )
             );
-            $ui->increaseGlobalIndent();
 
             $config = (array) Yaml::parseFile($configFilePath);
             $rootPathPart = $this->getRootPathPart($config['path_part'] ?? []);
@@ -76,8 +75,6 @@ final class Kernel
                     }
                 }
             }
-
-            $ui->decreaseGlobalIndent();
         }
     }
 
