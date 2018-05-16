@@ -5,4 +5,6 @@
 !/config/app.yml.dist
 downloads
 !downloads/.gitkeep
+var
+!var/.gitkeep
 vendor

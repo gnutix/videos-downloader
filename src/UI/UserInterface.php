@@ -34,6 +34,14 @@ interface UserInterface
     public function confirm(bool $confirmationDefault = true): bool;
 
     /**
+     * @param string $message
+     * @param null $default
+     *
+     * @return string
+     */
+    public function askQuestion(string $message, $default = null): string;
+
+    /**
      * @param string[] $messages
      * @param int $indentation
      */

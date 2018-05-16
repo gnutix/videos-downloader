@@ -3,7 +3,10 @@
 namespace App;
 
 use App\Domain\Content;
+use App\Domain\Path;
 use App\Domain\PathPart;
+use App\Domain\ProjectRootPathAware;
+use App\Domain\RootPathPartAware;
 use App\UI\UserInterface;
 use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\Finder\Finder;
@@ -63,6 +66,7 @@ final class Kernel
 
                     /** @var \App\Domain\Source $source */
                     $source = new $sourceClassName($ui, $sourceData['config'] ?? []);
+                    $this->illuminateObjectWithAwareness($source, $rootPathPart);
 
                     // Add the root path part to the contents' path
                     $contents = $source->getContents()
@@ -72,12 +76,13 @@ final class Kernel
                             return $content;
                         });
 
-                    foreach ((array) $sourceData['downloaders'] as $downloaders) {
-                        foreach ((array) $downloaders as $downloaderClassName => $downloaderData) {
+                    foreach ((array) $sourceData['processors'] as $processors) {
+                        foreach ((array) $processors as $processorClassName => $processorData) {
 
-                            /** @var \App\Domain\Downloader $downloader */
-                            $downloader = new $downloaderClassName($ui, $downloaderData['config'] ?? []);
-                            $downloader->synchronizeContents(clone $contents, $rootPathPart);
+                            /** @var \App\Domain\ContentsProcessor $processor */
+                            $processor = new $processorClassName($ui, $processorData['config'] ?? []);
+                            $this->illuminateObjectWithAwareness($processor, $rootPathPart);
+                            $processor->processContents(clone $contents);
                         }
                     }
                 }
@@ -141,5 +146,19 @@ final class Kernel
         }
 
         return $this->projectDir.DIRECTORY_SEPARATOR.$configFilePath;
+    }
+
+    /**
+     * @param object $object
+     * @param PathPart $rootPathPart
+     */
+    private function illuminateObjectWithAwareness($object, PathPart $rootPathPart): void
+    {
+        if ($object instanceof RootPathPartAware) {
+            $object->setRootPathPart($rootPathPart);
+        }
+        if ($object instanceof ProjectRootPathAware) {
+            $object->setProjectRootPath(new Path([new PathPart(['path' => $this->projectDir])]));
+        }
     }
 }

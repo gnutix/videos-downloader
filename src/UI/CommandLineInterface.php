@@ -6,6 +6,7 @@ use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Question\ConfirmationQuestion;
+use Symfony\Component\Console\Question\Question;
 
 final class CommandLineInterface implements UserInterface
 {
@@ -58,7 +59,26 @@ final class CommandLineInterface implements UserInterface
     /**
      * {@inheritdoc}
      */
-    public function askConfirmation(string $message, bool $default = true): bool
+    public function askQuestion(string $message, $default = null): string
+    {
+        /** @var \Symfony\Component\Console\Helper\QuestionHelper $questionHelper */
+        /** @noinspection ExceptionsAnnotatingAndHandlingInspection */
+        $questionHelper = $this->command->getHelper('question');
+
+        /** @noinspection ExceptionsAnnotatingAndHandlingInspection */
+        $answer = $questionHelper->ask($this->input, $this->output, new Question($message, $default));
+
+        if ($answer && $this->input->isInteractive()) {
+            $this->writeln('');
+        }
+
+        return (string) $answer;
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    private function askConfirmation(string $message, bool $default = true): bool
     {
         /** @var \Symfony\Component\Console\Helper\QuestionHelper $questionHelper */
         /** @noinspection ExceptionsAnnotatingAndHandlingInspection */

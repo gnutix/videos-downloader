@@ -60,7 +60,7 @@ sources:
                 card_properties:
                     - '[desc]'
                     - '[attachments][%index%][url]'
-            downloaders:
+            processors:
                 -
                     Extension\File\File:
                         config:
@@ -86,7 +86,7 @@ sources:
                 base_url: 'https://qlrr.fr/6/qlrr/'
                 resources:
                     - '/home/gnutix/Downloads/QLRR/data.csv'
-            downloaders:
+            processors:
                 -
                     Extension\File\File:
                         config:

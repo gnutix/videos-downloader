@@ -11,7 +11,7 @@ sources:
         Extension\Trello\Trello:
             config:
                 board_id: ~ # this needs to be filled in!
-            downloaders:
+            processors:
                 -
                     Extension\YouTubeDl\YouTubeDl:
                         config: []
