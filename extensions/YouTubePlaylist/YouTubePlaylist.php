@@ -16,6 +16,8 @@ use Google_Service_YouTube_ResourceId;
 
 final class YouTubePlaylist extends ContentsProcessor implements ProjectRootPathAware
 {
+    private const YOUTUBE_PLAYLIST_URL = 'https://www.youtube.com/playlist?list=%s';
+
     /** @var Path */
     private $projectRootPath;
 
@@ -62,7 +64,7 @@ final class YouTubePlaylist extends ContentsProcessor implements ProjectRootPath
         $this->ui->writeln(
             sprintf(
                 PHP_EOL.'Append the following videos to the playlist <info>%s</info>...'.PHP_EOL,
-                'https://www.youtube.com/playlist?list='.$this->config['playlist_id']
+                sprintf(static::YOUTUBE_PLAYLIST_URL, $this->config['playlist_id'])
             )
         );
 
@@ -86,7 +88,6 @@ final class YouTubePlaylist extends ContentsProcessor implements ProjectRootPath
                 }
             );
 
-        // Insert the videos IDs in the playlist
         foreach ($videosIdsToInsert as $youtubeVideoId) {
             try {
                 $this->ui->write(' * '.$youtubeVideoId.' ... ');
@@ -119,21 +120,6 @@ final class YouTubePlaylist extends ContentsProcessor implements ProjectRootPath
     }
 
     /**
-     * @return string
-     */
-    private function getAuthConfigPath(): string
-    {
-        return (string) new Path([
-            new PathPart([
-                'path' => $this->config['auth_config_path'],
-                'substitutions' => [
-                    '%project_root%' => $this->projectRootPath
-                ]
-            ])
-        ]);
-    }
-
-    /**
      * @return Google_Client
      * @throws \Google_Exception
      */
@@ -142,9 +128,24 @@ final class YouTubePlaylist extends ContentsProcessor implements ProjectRootPath
         $client = new Google_Client();
         $client->addScope(Google_Service_YouTube::YOUTUBE);
         $client->setAccessType('offline');
-        $client->setAuthConfig($this->getAuthConfigPath());
+        $client->setAuthConfig((string) $this->getAuthConfigFilePath());
 
         return $this->authenticateGoogleClient($client);
+    }
+
+    /**
+     * @return Path
+     */
+    private function getAuthConfigFilePath(): Path
+    {
+        return new Path([
+            new PathPart([
+                'path' => $this->config['auth_config_path'],
+                'substitutions' => [
+                    '%project_root%' => $this->projectRootPath
+                ]
+            ])
+        ]);
     }
 
     /**
