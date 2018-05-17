@@ -47,7 +47,7 @@ interface UserInterface
 
     /**
      * @param string $message
-     * @param null $default
+     * @param mixed $default
      *
      * @return string
      */

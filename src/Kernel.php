@@ -61,10 +61,10 @@ final class Kernel
             }
 
             $rootPathPart = $this->getRootPathPart($config['path_part'] ?? []);
-            $contents = new Contents();
+            $contents = new Contents([]);
 
             foreach ((array) $config['sources'] as $sources) {
-                foreach ((array)$sources as $sourceClassName => $sourceConfig) {
+                foreach ((array) $sources as $sourceClassName => $sourceConfig) {
 
                     /** @var \App\Domain\Source $source */
                     $source = new $sourceClassName($ui, $sourceConfig ?? []);
