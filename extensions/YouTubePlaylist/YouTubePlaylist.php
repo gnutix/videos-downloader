@@ -2,12 +2,15 @@
 
 namespace Extension\YouTubePlaylist;
 
+use App\Collection\Collection;
 use App\Domain\Content;
 use App\Domain\Contents;
 use App\Domain\ContentsProcessor;
 use App\Domain\Path;
 use App\Domain\PathPart;
 use App\Domain\ProjectRootPathAware;
+use App\UI\Skippable;
+use App\UI\UserInterface;
 use Google_Client;
 use Google_Service_YouTube;
 use Google_Service_YouTube_PlaylistItem;
@@ -16,6 +19,8 @@ use Google_Service_YouTube_ResourceId;
 
 final class YouTubePlaylist extends ContentsProcessor implements ProjectRootPathAware
 {
+    use Skippable;
+
     private const YOUTUBE_PLAYLIST_URL = 'https://www.youtube.com/playlist?list=%s';
 
     /** @var Path */
@@ -23,6 +28,21 @@ final class YouTubePlaylist extends ContentsProcessor implements ProjectRootPath
 
     /** @var Google_Service_YouTube */
     private $youtubeService;
+
+    /**
+     * {@inheritdoc}
+     */
+    public function __construct(UserInterface $ui, array $config = [])
+    {
+        parent::__construct($ui, $config);
+
+        foreach (['playlist_id', 'auth_config_path', 'youtube_url_extractor'] as $configKey) {
+            if (empty($this->config[$configKey])) {
+                throw new \RuntimeException(sprintf('The "%s" configuration key is mandatory.', $configKey));
+            }
+        }
+
+    }
 
     /**
      * {@inheritdoc}
@@ -45,28 +65,9 @@ final class YouTubePlaylist extends ContentsProcessor implements ProjectRootPath
      */
     public function processContents(Contents $contents): void
     {
-        foreach (['playlist_id', 'auth_config_path', 'youtube_url_extractor'] as $configKey) {
-            if (empty($this->config[$configKey])) {
-                throw new \RuntimeException(sprintf('The "%s" configuration key is mandatory.', $configKey));
-            }
+        if ($contents->isEmpty()) {
+            return;
         }
-
-        $this->syncYouTubePlaylistWithContents($contents);
-    }
-
-    /**
-     * @param Contents $contents
-     *
-     * @throws \Google_Exception
-     */
-    private function syncYouTubePlaylistWithContents(Contents $contents): void
-    {
-        $this->ui->writeln(
-            sprintf(
-                PHP_EOL.'Append the following videos to the playlist <info>%s</info>...'.PHP_EOL,
-                sprintf(static::YOUTUBE_PLAYLIST_URL, $this->config['playlist_id'])
-            )
-        );
 
         $videosIdsAlreadyInPlaylist = $this->getAllPlaylistItems('snippet', $this->config['playlist_id'])
             ->map(
@@ -88,15 +89,13 @@ final class YouTubePlaylist extends ContentsProcessor implements ProjectRootPath
                 }
             );
 
-        if ($videosIdsToInsert->isEmpty()) {
-            $this->ui->writeln($this->ui->indent().'<comment>Nothing to add.</comment>'.PHP_EOL);
-
+        if (!$this->shouldUpdatePlaylist($videosIdsToInsert)) {
             return;
         }
 
         foreach ($videosIdsToInsert as $youtubeVideoId) {
             try {
-                $this->ui->write($this->ui->indent().'* '.$youtubeVideoId.' ... ');
+                $this->ui->write($this->ui->indent(2).'* [<comment>'.$youtubeVideoId.'</comment>] ... ');
                 $this->insertVideoInPlaylist($youtubeVideoId, $this->config['playlist_id']);
                 $this->ui->write('<info>Done.</info>');
             } catch (\Exception $e) {
@@ -182,9 +181,9 @@ final class YouTubePlaylist extends ContentsProcessor implements ProjectRootPath
                 $this->ui->setInteractive(true);
             }
 
-            $authCode = $this->ui->askQuestion('Then, enter the verification code here: ');
-
-            $this->ui->setInteractive($interactive);
+            $authCode = $this->ui->forceInteractive(function () {
+                return $this->ui->askQuestion('Then, enter the verification code here: ');
+            });
 
             // Exchange authorization code for an access token.
             $accessToken = $client->fetchAccessTokenWithAuthCode($authCode);
@@ -278,5 +277,31 @@ final class YouTubePlaylist extends ContentsProcessor implements ProjectRootPath
         }
 
         return $matches[$this->config['youtube_url_extractor']['video_id_index']];
+    }
+
+    /**
+     * @param \App\Collection\Collection $videoIds
+     *
+     * @return bool
+     */
+    private function shouldUpdatePlaylist(Collection $videoIds): bool
+    {
+        $this->ui->writeln(
+            sprintf(
+                PHP_EOL.'Append videos to the playlist <info>%s</info>...'.PHP_EOL,
+                sprintf(static::YOUTUBE_PLAYLIST_URL, $this->config['playlist_id'])
+            )
+        );
+
+        return $this->shouldProcess(
+            $this->ui,
+            $videoIds,
+            sprintf(
+                '%sThe script is about to add <question> %s </question> videos to the playlist. '.PHP_EOL,
+                $this->ui->indent(),
+                $videoIds->count()
+            ),
+            'add'
+        );
     }
 }

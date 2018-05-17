@@ -7,6 +7,7 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Question\ConfirmationQuestion;
 use Symfony\Component\Console\Question\Question;
+use Symfony\Component\Console\Style\SymfonyStyle;
 
 final class CommandLineInterface implements UserInterface
 {
@@ -22,6 +23,9 @@ final class CommandLineInterface implements UserInterface
     /** @var \Symfony\Component\Console\Output\OutputInterface */
     private $output;
 
+    /** @var \Symfony\Component\Console\Style\SymfonyStyle */
+    private $style;
+
     /**
      * @param bool $dryRun
      * @param \Symfony\Component\Console\Command\Command $command
@@ -34,10 +38,19 @@ final class CommandLineInterface implements UserInterface
         $this->command = $command;
         $this->input = $input;
         $this->output = $output;
+        $this->style = new SymfonyStyle($input, $output);
 
         if ($dryRun) {
             $input->setInteractive(false);
         }
+    }
+
+    /**
+     * @return \Symfony\Component\Console\Style\SymfonyStyle
+     */
+    public function getSymfonyStyle(): SymfonyStyle
+    {
+        return $this->style;
     }
 
     /**
@@ -135,14 +148,31 @@ final class CommandLineInterface implements UserInterface
     /**
      * {@inheritdoc}
      */
-    public function forceOutput(callable $callable): void
+    public function forceOutput(callable $callable)
     {
         $verbosity = $this->output->getVerbosity();
         $this->output->setVerbosity(OutputInterface::VERBOSITY_NORMAL);
 
-        $callable();
+        $result = $callable();
 
         $this->output->setVerbosity($verbosity);
+
+        return $result;
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function forceInteractive(callable $callable)
+    {
+        $interactive = $this->input->isInteractive();
+        $this->input->setInteractive(true);
+
+        $result = $this->forceOutput($callable);
+
+        $this->input->setInteractive($interactive);
+
+        return $result;
     }
 
     /**

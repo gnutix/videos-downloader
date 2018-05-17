@@ -209,7 +209,7 @@ final class YouTubeDl extends Downloader
      *
      * @throws \Exception
      */
-    private function doDownload(Download $download, array $downloadOptions)
+    private function doDownload(Download $download, array $downloadOptions): void
     {
         $youtubeDlOptions = $this->config['youtube_dl'];
 

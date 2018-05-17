@@ -9,9 +9,8 @@ path_part:
 sources:
     -
         Extension\Trello\Trello:
-            config:
-                board_id: ~ # this needs to be filled in!
-            processors:
-                -
-                    Extension\YouTubeDl\YouTubeDl:
-                        config: []
+            board_id: ~ # this needs to be filled in!
+
+processors:
+    -
+        Extension\YouTubeDl\YouTubeDl: ~

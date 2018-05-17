@@ -55,18 +55,16 @@ path_part:
 sources:
     -
         Extension\Trello\Trello:
-            config:
-                board_id: MkYHGxzY
-                card_properties:
-                    - '[desc]'
-                    - '[attachments][%index%][url]'
-            processors:
-                -
-                    Extension\File\File:
-                        config:
-                            extensions: '(?:pdf|mp3)'
-                -
-                    Extension\YouTubeDl\YouTubeDl: ~
+            board_id: MkYHGxzY
+            card_properties:
+                - '[desc]'
+                - '[attachments][%index%][url]'
+processors:
+    -
+        Extension\File\File:
+            extensions: '(?:pdf|mp3)'
+    -
+        Extension\YouTubeDl\YouTubeDl: ~
 ```
 
 Here's another I use to download files from a website for which I had a paid account and extracted a list of URLs
@@ -82,21 +80,18 @@ path_part:
 sources:
     -
         Extension\CSV\CSV:
-            config:
-                base_url: 'https://qlrr.fr/6/qlrr/'
-                resources:
-                    - '/home/gnutix/Downloads/QLRR/data.csv'
-            processors:
-                -
-                    Extension\File\File:
-                        config:
-                            extensions: '(?:pdf|mp4)'
-                -
-                    Extension\YouTubeDl\YouTubeDl:
-                        config:
-                            referer: 'https://qlrr.fr/6/'
-                            download_files:
-                                video: mp4
+            base_url: 'https://qlrr.fr/6/qlrr/'
+            resources:
+                - '/home/gnutix/Downloads/QLRR/data.csv'
+processors:
+    -
+        Extension\File\File:
+            extensions: '(?:pdf|mp4)'
+    -
+        Extension\YouTubeDl\YouTubeDl:
+            referer: 'https://qlrr.fr/6/'
+            download_files:
+                video: mp4
 ```
 
 ### Some (mostly debug related) tips for analyzing the downloaded files

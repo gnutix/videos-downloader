@@ -104,28 +104,16 @@ abstract class Downloader extends ContentsProcessor implements RootPathPartAware
     {
         $this->ui->writeln(sprintf('Downloading files with <info>%s</info>... '.PHP_EOL, static::class));
 
-        if ($downloads->isEmpty()) {
-            $this->ui->writeln($this->ui->indent().'<comment>Nothing to download.</comment>'.PHP_EOL);
-
-            return false;
-        }
-
-        $this->ui->writeln(
+        return $this->shouldProcess(
+            $this->ui,
+            $downloads,
             sprintf(
                 '%sThe script is about to download <question> %s </question> files into <info>%s</info>. '.PHP_EOL,
                 $this->ui->indent(),
                 $downloads->count(),
                 (string) $downloadPath
-            )
+            ),
+            'download'
         );
-
-        $this->ui->write($this->ui->indent());
-        if ($this->skip($this->ui) || !$this->ui->confirm()) {
-            $this->ui->writeln(($this->ui->isDryRun() ? '' : PHP_EOL).'<info>Done.</info>'.PHP_EOL);
-
-            return false;
-        }
-
-        return true;
     }
 }

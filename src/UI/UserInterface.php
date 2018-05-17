@@ -2,8 +2,15 @@
 
 namespace App\UI;
 
+use Symfony\Component\Console\Style\SymfonyStyle;
+
 interface UserInterface
 {
+    /**
+     * @return SymfonyStyle
+     */
+    public function getSymfonyStyle(): SymfonyStyle;
+
     /**
      * @return bool
      */
@@ -54,8 +61,17 @@ interface UserInterface
 
     /**
      * @param callable $callable
+     *
+     * @return mixed
      */
-    public function forceOutput(callable $callable): void;
+    public function forceOutput(callable $callable);
+
+    /**
+     * @param callable $callable
+     *
+     * @return mixed
+     */
+    public function forceInteractive(callable $callable);
 
     /**
      * @param int $indentation

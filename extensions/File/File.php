@@ -102,7 +102,7 @@ final class File extends Downloader
 
                     $this->ui->writeln('<info>Done.</info>');
                     break;
-                } catch (\Exception $e) {
+                } catch (\GuzzleHttp\Exception\GuzzleException | \Exception $e) {
                     $attempt++;
 
                     // Maximum number of attempts reached, move along...
@@ -122,6 +122,7 @@ final class File extends Downloader
      * @param \Extension\File\Download|\App\Domain\Download $download
      *
      * @throws \Symfony\Component\Filesystem\Exception\IOException
+     * @throws \GuzzleHttp\Exception\GuzzleException
      */
     private function doDownload(DownloadInterface $download): void
     {

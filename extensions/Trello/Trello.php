@@ -150,7 +150,7 @@ final class Trello implements Source
             return new ArrayCollection([$this->propertyAccessor->getValue($card, $selector)]);
         }
 
-        list(, $rootProperty, $propertyName, $propertyValue, $subProperty) = $matches;
+        [, $rootProperty, $propertyName, $propertyValue, $subProperty] = $matches;
 
         // Guard against invalid usage of our custom syntax
         if (preg_match(static::CUSTOM_SYNTAX_REGEX, $subProperty)) {

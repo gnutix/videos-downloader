@@ -3,6 +3,7 @@
 namespace App;
 
 use App\Domain\Content;
+use App\Domain\Contents;
 use App\Domain\Path;
 use App\Domain\PathPart;
 use App\Domain\ProjectRootPathAware;
@@ -44,47 +45,52 @@ final class Kernel
             : $this->getAllConfigFilesPaths();
 
         foreach ($configFilesPaths as $configFilePath) {
-            $ui->write(
+            $ui->getSymfonyStyle()->section(
                 sprintf(
                     'Processing configuration file "<info>%s</info>"... ',
                     $this->getConfigRelativeFilePath($configFilePath)
                 )
             );
+
             $config = (array) Yaml::parseFile($configFilePath);
             $config['enabled'] = $config['enabled'] ?? true;
 
             if (!$config['enabled']) {
-                $ui->writeln('<info>Skipped.</info>'.PHP_EOL);
+                $ui->getSymfonyStyle()->note('Skipped.');
                 continue;
             }
-            $ui->writeln(PHP_EOL);
 
             $rootPathPart = $this->getRootPathPart($config['path_part'] ?? []);
+            $contents = new Contents();
 
             foreach ((array) $config['sources'] as $sources) {
-                foreach ((array) $sources as $sourceClassName => $sourceData) {
+                foreach ((array)$sources as $sourceClassName => $sourceConfig) {
 
                     /** @var \App\Domain\Source $source */
-                    $source = new $sourceClassName($ui, $sourceData['config'] ?? []);
+                    $source = new $sourceClassName($ui, $sourceConfig ?? []);
                     $this->illuminateObjectWithAwareness($source, $rootPathPart);
 
                     // Add the root path part to the contents' path
-                    $contents = $source->getContents()
+                    $sourceContents = $source->getContents()
                         ->map(function (Content $content) use ($rootPathPart) {
                             $content->getPath()->add($rootPathPart);
 
                             return $content;
                         });
 
-                    foreach ((array) $sourceData['processors'] as $processors) {
-                        foreach ((array) $processors as $processorClassName => $processorData) {
-
-                            /** @var \App\Domain\ContentsProcessor $processor */
-                            $processor = new $processorClassName($ui, $processorData['config'] ?? []);
-                            $this->illuminateObjectWithAwareness($processor, $rootPathPart);
-                            $processor->processContents(clone $contents);
-                        }
+                    foreach ($sourceContents as $content) {
+                        $contents->add($content);
                     }
+                }
+            }
+
+            foreach ((array) $config['processors'] as $processors) {
+                foreach ((array) $processors as $processorClassName => $processorConfig) {
+
+                    /** @var \App\Domain\ContentsProcessor $processor */
+                    $processor = new $processorClassName($ui, $processorConfig ?? []);
+                    $this->illuminateObjectWithAwareness($processor, $rootPathPart);
+                    $processor->processContents(clone $contents);
                 }
             }
         }
