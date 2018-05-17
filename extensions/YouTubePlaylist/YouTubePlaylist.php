@@ -192,8 +192,8 @@ final class YouTubePlaylist extends ContentsProcessor implements ProjectRootPath
             file_put_contents($credentialsPath, json_encode($accessToken));
             $this->ui->writeln(
                 sprintf(
-                    'Credentials saved to "<info>%s</info>".'.PHP_EOL,
-                    str_replace($this->projectRootPath, '', $credentialsPath)
+                    'Credentials saved to <info>%s</info>.'.PHP_EOL,
+                    str_replace((string) $this->projectRootPath.DIRECTORY_SEPARATOR, '', $credentialsPath)
                 )
             );
         }

@@ -52,7 +52,7 @@ final class Kernel
         foreach ($configFilesPaths as $configFilePath) {
             $this->ui->getSymfonyStyle()->section(
                 sprintf(
-                    'Processing configuration file "<info>%s</info>"... ',
+                    'Processing configuration file <info>%s</info>',
                     $this->getConfigRelativeFilePath($configFilePath)
                 )
             );
