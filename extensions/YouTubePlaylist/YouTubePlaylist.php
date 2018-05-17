@@ -75,7 +75,7 @@ final class YouTubePlaylist extends ContentsProcessor implements ProjectRootPath
                 }
             );
 
-        /** @var string[] $videosIdsToInsert */
+        /** @var \App\Collection\Collection|string[] $videosIdsToInsert */
         $videosIdsToInsert = $contents
             ->map(
                 function (Content $content) {
@@ -88,9 +88,15 @@ final class YouTubePlaylist extends ContentsProcessor implements ProjectRootPath
                 }
             );
 
+        if ($videosIdsToInsert->isEmpty()) {
+            $this->ui->writeln($this->ui->indent().'<comment>Nothing to add.</comment>'.PHP_EOL);
+
+            return;
+        }
+
         foreach ($videosIdsToInsert as $youtubeVideoId) {
             try {
-                $this->ui->write(' * '.$youtubeVideoId.' ... ');
+                $this->ui->write($this->ui->indent().'* '.$youtubeVideoId.' ... ');
                 $this->insertVideoInPlaylist($youtubeVideoId, $this->config['playlist_id']);
                 $this->ui->write('<info>Done.</info>');
             } catch (\Exception $e) {
@@ -169,14 +175,28 @@ final class YouTubePlaylist extends ContentsProcessor implements ProjectRootPath
                     $authUrl
                 )
             );
+
+            // As we can't have a default value for this question, we need to force interactive mode
+            $interactive = $this->ui->isInteractive();
+            if (!$interactive) {
+                $this->ui->setInteractive(true);
+            }
+
             $authCode = $this->ui->askQuestion('Then, enter the verification code here: ');
+
+            $this->ui->setInteractive($interactive);
 
             // Exchange authorization code for an access token.
             $accessToken = $client->fetchAccessTokenWithAuthCode($authCode);
 
             // Store the credentials to disk.
             file_put_contents($credentialsPath, json_encode($accessToken));
-            $this->ui->writeln(sprintf('Credentials saved to "<info>%s</info>"', $credentialsPath));
+            $this->ui->writeln(
+                sprintf(
+                    'Credentials saved to "<info>%s</info>".'.PHP_EOL,
+                    str_replace($this->projectRootPath, '', $credentialsPath)
+                )
+            );
         }
         $client->setAccessToken($accessToken);
 

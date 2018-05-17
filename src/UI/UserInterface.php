@@ -10,6 +10,11 @@ interface UserInterface
     public function isInteractive(): bool;
 
     /**
+     * @param bool $interactive
+     */
+    public function setInteractive(bool $interactive): void;
+
+    /**
      * @return bool
      */
     public function isDryRun(): bool;

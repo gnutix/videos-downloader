@@ -51,6 +51,14 @@ final class CommandLineInterface implements UserInterface
     /**
      * {@inheritdoc}
      */
+    public function setInteractive(bool $interactive): void
+    {
+        $this->input->setInteractive($interactive);
+    }
+
+    /**
+     * {@inheritdoc}
+     */
     public function isDryRun(): bool
     {
         return $this->dryRun;
