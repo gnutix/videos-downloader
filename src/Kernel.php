@@ -21,6 +21,9 @@ final class Kernel
     /** @var string */
     private $configDir;
 
+    /** @var \App\UI\UserInterface */
+    private $ui;
+
     /**
      * @param string $projectDir
      */
@@ -40,12 +43,14 @@ final class Kernel
      */
     public function __invoke(UserInterface $ui, $singleConfigFilePath = ''): void
     {
+        $this->ui = $ui;
+
         $configFilesPaths = !empty($singleConfigFilePath)
             ? [$this->getConfigAbsoluteFilePath($singleConfigFilePath)]
             : $this->getAllConfigFilesPaths();
 
         foreach ($configFilesPaths as $configFilePath) {
-            $ui->getSymfonyStyle()->section(
+            $this->ui->getSymfonyStyle()->section(
                 sprintf(
                     'Processing configuration file "<info>%s</info>"... ',
                     $this->getConfigRelativeFilePath($configFilePath)
@@ -56,43 +61,15 @@ final class Kernel
             $config['enabled'] = $config['enabled'] ?? true;
 
             if (!$config['enabled']) {
-                $ui->getSymfonyStyle()->note('Skipped.');
+                $this->ui->getSymfonyStyle()->note('Skipped.');
                 continue;
             }
 
             $rootPathPart = $this->getRootPathPart($config['path_part'] ?? []);
             $contents = new Contents([]);
 
-            foreach ((array) $config['sources'] as $sources) {
-                foreach ((array) $sources as $sourceClassName => $sourceConfig) {
-
-                    /** @var \App\Domain\Source $source */
-                    $source = new $sourceClassName($ui, $sourceConfig ?? []);
-                    $this->illuminateObjectWithAwareness($source, $rootPathPart);
-
-                    // Add the root path part to the contents' path
-                    $sourceContents = $source->getContents()
-                        ->map(function (Content $content) use ($rootPathPart) {
-                            $content->getPath()->add($rootPathPart);
-
-                            return $content;
-                        });
-
-                    foreach ($sourceContents as $content) {
-                        $contents->add($content);
-                    }
-                }
-            }
-
-            foreach ((array) $config['processors'] as $processors) {
-                foreach ((array) $processors as $processorClassName => $processorConfig) {
-
-                    /** @var \App\Domain\ContentsProcessor $processor */
-                    $processor = new $processorClassName($ui, $processorConfig ?? []);
-                    $this->illuminateObjectWithAwareness($processor, $rootPathPart);
-                    $processor->processContents(clone $contents);
-                }
-            }
+            $this->crawlSources($config['sources'], $contents, $rootPathPart);
+            $this->applyProcessors($config['processors'], $contents, $rootPathPart);
         }
     }
 
@@ -155,10 +132,57 @@ final class Kernel
     }
 
     /**
+     * @param array $config
+     * @param Contents $contents
+     * @param PathPart $rootPathPart
+     */
+    private function crawlSources(array $config, Contents $contents, PathPart $rootPathPart): void
+    {
+        foreach ($config as $sources) {
+            foreach ($sources as $sourceClassName => $sourceConfig) {
+
+                /** @var \App\Domain\Source $source */
+                $source = new $sourceClassName($this->ui, $sourceConfig ?? []);
+                $this->informObjectOfContext($source, $rootPathPart);
+
+                // Add the root path part to the contents' path
+                $sourceContents = $source->getContents()
+                    ->map(function (Content $content) use ($rootPathPart) {
+                        $content->getPath()->add($rootPathPart);
+
+                        return $content;
+                    });
+
+                foreach ($sourceContents as $content) {
+                    $contents->add($content);
+                }
+            }
+        }
+    }
+
+    /**
+     * @param array $config
+     * @param Contents $contents
+     * @param PathPart $rootPathPart
+     */
+    private function applyProcessors(array $config, Contents $contents, PathPart $rootPathPart): void
+    {
+        foreach ($config as $processors) {
+            foreach ($processors as $processorClassName => $processorConfig) {
+
+                /** @var \App\Domain\ContentsProcessor $processor */
+                $processor = new $processorClassName($this->ui, $processorConfig ?? []);
+                $this->informObjectOfContext($processor, $rootPathPart);
+                $processor->processContents(clone $contents);
+            }
+        }
+    }
+
+    /**
      * @param object $object
      * @param PathPart $rootPathPart
      */
-    private function illuminateObjectWithAwareness($object, PathPart $rootPathPart): void
+    private function informObjectOfContext($object, PathPart $rootPathPart): void
     {
         if ($object instanceof RootPathPartAware) {
             $object->setRootPathPart($rootPathPart);
