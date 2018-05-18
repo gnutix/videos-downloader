@@ -1,0 +1,4 @@
+---
+# See https://console.developers.google.com/apis/dashboard
+# Available variables : %project_root%
+auth_config_path: ~

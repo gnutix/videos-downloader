@@ -111,11 +111,14 @@ final class Trello implements Source
 
         // Decode the stdClass object to an array to be used with PropertyAccess
         foreach (json_decode(json_encode($trelloCards), true) as $card) {
-            // Get the contents from the card's properties
+            // Build the contents from the card's properties
             $data = [];
+
             foreach ((array) $this->config['card_properties'] as $selector) {
                 foreach ($this->getValuesFromCardMatchingSelector($card, $selector) as $value) {
-                    $data[] = $value;
+                    if ($this->isCardContentValid($card)) {
+                        $data[$selector] = $value;
+                    }
                 }
             }
 
@@ -123,8 +126,20 @@ final class Trello implements Source
                 $listName = $this->propertyAccessor->getValue($lists, '['.$card['idList'].'].name');
                 $cardName = $this->propertyAccessor->getValue($card, '[name]');
 
+                $dataAsArray = $this->config['data_as_array'] ?? false;
+                if (!$dataAsArray) {
+                    $data = implode(PHP_EOL, $data);
+                } else {
+                    if ($this->config['pass_trello_client_to_processors'] ?? false) {
+                        $data['_trello_client'] = $client;
+                    }
+                    if ($this->config['pass_trello_list_name'] ?? false) {
+                        $data['_trello_list_name'] = $listName;
+                    }
+                }
+
                 $contents->add(
-                    new Content(implode(PHP_EOL, $data), $this->generatePath($pathPartConfig, $listName, $cardName))
+                    new Content($data, $this->generatePath($pathPartConfig, $listName, $cardName))
                 );
             }
         }
@@ -135,8 +150,38 @@ final class Trello implements Source
     }
 
     /**
+     * @param mixed $card
+     *
+     * @return bool
+     */
+    private function isCardContentValid($card): bool
+    {
+        $validationRules = (array) ($this->config['validation_rules'] ?? []);
+
+        if (empty($validationRules)) {
+            return true;
+        }
+
+        foreach ($validationRules as $validationSelector => $shouldBeSet) {
+            $isEmpty = $this->getValuesFromCardMatchingSelector($card, $validationSelector)
+                ->filter(
+                    function ($value) {
+                        return !empty($value);
+                    }
+                )
+                ->isEmpty();
+
+            if ((bool) $shouldBeSet !== $isEmpty) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
      * @param string $selector
-     * @param $card
+     * @param mixed $card
      *
      * @return ArrayCollection
      * @throws \Symfony\Component\PropertyAccess\Exception\UnexpectedTypeException

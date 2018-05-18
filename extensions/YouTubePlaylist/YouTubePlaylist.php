@@ -314,12 +314,11 @@ final class YouTubePlaylist extends ContentsProcessor implements ProjectRootPath
 
     /**
      * @param string $videoId
-     * @param string $playlistId
      *
      * @throws \Google_Exception
      */
     /** @noinspection PhpUnusedPrivateMethodInspection */
-    private function removeVideoInPlaylist(string $videoId, string $playlistId): void
+    private function removeVideoInPlaylist(string $videoId): void
     {
         $this->getYouTubeService()->playlistItems->delete($videoId);
     }

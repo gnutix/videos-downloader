@@ -22,4 +22,17 @@ abstract class TrelloClient extends Client
      * @throws \Stevenmaguire\Services\Trello\Exceptions\Exception
      */
     abstract public function getBoardCards(string $boardId, array $parameters = []): array;
+
+    /**
+     * @param string $cardId
+     * @param string $customFieldId
+     * @param array $attributes
+     *
+     * @return void
+     */
+    abstract public function updateCardCustomField(
+        string $cardId,
+        string $customFieldId,
+        array $attributes
+    ): void;
 }

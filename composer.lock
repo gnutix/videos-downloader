@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file",
         "This file is @generated automatically"
     ],
-    "content-hash": "22e7855a7dbb9c760d0e368794787633",
+    "content-hash": "5d822c10bed30d8fdecce85f2ebf05af",
     "packages": [
         {
             "name": "doctrine/collections",
@@ -990,16 +990,16 @@
         },
         {
             "name": "stevenmaguire/trello-php",
-            "version": "0.4.1",
+            "version": "0.5.3",
             "source": {
                 "type": "git",
                 "url": "https://github.com/stevenmaguire/trello-php.git",
-                "reference": "18e4a44cac06a3ddd3e631358fd79c227b915bcb"
+                "reference": "237a871393de66b071641137a86aa618becb70c2"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/stevenmaguire/trello-php/zipball/18e4a44cac06a3ddd3e631358fd79c227b915bcb",
-                "reference": "18e4a44cac06a3ddd3e631358fd79c227b915bcb",
+                "url": "https://api.github.com/repos/stevenmaguire/trello-php/zipball/237a871393de66b071641137a86aa618becb70c2",
+                "reference": "237a871393de66b071641137a86aa618becb70c2",
                 "shasum": ""
             },
             "require": {
@@ -1038,7 +1038,7 @@
                 "trello gold",
                 "wrapper"
             ],
-            "time": "2017-03-23T02:02:00+00:00"
+            "time": "2018-03-28T17:43:32+00:00"
         },
         {
             "name": "symfony/browser-kit",

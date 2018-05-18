@@ -11,10 +11,10 @@ final class Content
     private $path;
 
     /**
-     * @param string $data
+     * @param mixed $data
      * @param \App\Domain\Path $path
      */
-    public function __construct(string $data, Path $path)
+    public function __construct($data, Path $path)
     {
         $this->data = $data;
         $this->path = $path;
@@ -29,9 +29,9 @@ final class Content
     }
 
     /**
-     * @return string
+     * @return mixed
      */
-    public function getData(): string
+    public function getData()
     {
         return $this->data;
     }
