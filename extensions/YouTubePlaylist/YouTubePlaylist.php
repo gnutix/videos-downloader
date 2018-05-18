@@ -69,46 +69,74 @@ final class YouTubePlaylist extends ContentsProcessor implements ProjectRootPath
             return;
         }
 
-        $videosIdsAlreadyInPlaylist = $this->getAllPlaylistItems('snippet', $this->config['playlist_id'])
+        $updates = [
+            'remove' => [],
+            'add' => [],
+        ];
+        $allPlaylistItems = $this->getAllPlaylistItems('snippet', $this->config['playlist_id']);
+
+        /** @var \App\Collection\Collection|string[] $videosIdsInPlaylist */
+        $videosIdsInPlaylist = $allPlaylistItems
             ->map(
                 function (Google_Service_YouTube_PlaylistItem $playlistItem) {
                     return $playlistItem->getSnippet()->getResourceId()->getVideoId();
                 }
             );
 
-        /** @var \App\Collection\Collection|string[] $videosIdsToInsert */
-        $videosIdsToInsert = $contents
+        /** @var \App\Collection\Collection|string[] $videosIdsInContents */
+        $videosIdsInContents = $contents
             ->map(
                 function (Content $content) {
                     return $this->getYouTubeVideoIdFromContent($content);
                 }
             )
             ->filter(
-                function ($youtubeVideoId) use ($videosIdsAlreadyInPlaylist) {
-                    return !empty($youtubeVideoId) && !$videosIdsAlreadyInPlaylist->contains($youtubeVideoId);
+                function (string $youtubeId) {
+                    return !empty($youtubeId);
                 }
             );
 
-        if (!$this->shouldUpdatePlaylist($videosIdsToInsert)) {
-            return;
-        }
-
-        foreach ($videosIdsToInsert as $youtubeVideoId) {
-            try {
-                $this->ui->write($this->ui->indent(2).'* [<comment>'.$youtubeVideoId.'</comment>] ... ');
-                $this->insertVideoInPlaylist($youtubeVideoId, $this->config['playlist_id']);
-                $this->ui->write('<info>Done.</info>');
-            } catch (\Exception $e) {
-                $json = json_decode($e->getMessage(), true);
-                foreach ($json['error']['errors'] as $error) {
-                    $this->ui->write('<error>'.$error['message'].'</error> ');
+        $updates['remove'] = $allPlaylistItems
+            ->filter(
+                function (Google_Service_YouTube_PlaylistItem $playlistItem) use ($videosIdsInContents) {
+                    return !$videosIdsInContents->contains($playlistItem->getSnippet()->getResourceId()->getVideoId());
                 }
-            } finally {
-                $this->ui->write(PHP_EOL);
-            }
-        }
+            )
+            ->map(
+                function (Google_Service_YouTube_PlaylistItem $playlistItem) {
+                    return $playlistItem->getId();
+                }
+            );
 
-        $this->ui->write(PHP_EOL);
+        $updates['add'] = $videosIdsInContents
+            ->filter(
+                function (string $youtubeVideoId) use ($videosIdsInPlaylist) {
+                    return !$videosIdsInPlaylist->contains($youtubeVideoId);
+                }
+            );
+
+        foreach ($updates as $action => $ids) {
+            if (!$this->shouldUpdatePlaylist($ids, $action)) {
+                continue;
+            }
+
+            foreach ($ids as $id) {
+                try {
+                    $this->ui->write($this->ui->indent(2).'* [<comment>'.$id.'</comment>] ... ');
+                    $this->updatePlaylist($action, $id, $this->config['playlist_id']);
+                    $this->ui->write('<info>Done.</info>');
+                } catch (\Exception $e) {
+                    $json = json_decode($e->getMessage(), true);
+                    foreach ($json['error']['errors'] as $error) {
+                        $this->ui->write('<error>'.$error['message'].'</error> ');
+                    }
+                } finally {
+                    $this->ui->write(PHP_EOL);
+                }
+            }
+
+            $this->ui->write(PHP_EOL);
+        }
     }
 
     /**
@@ -240,12 +268,31 @@ final class YouTubePlaylist extends ContentsProcessor implements ProjectRootPath
     }
 
     /**
+     * @param string $action
+     * @param string $videoId
+     * @param string $playlistId
+     *
+     * @throws \UnexpectedValueException
+     */
+    private function updatePlaylist(string $action, string $videoId, string $playlistId): void
+    {
+        $method = $action.'VideoInPlaylist';
+        if (!method_exists($this, $method)) {
+            throw new \UnexpectedValueException(
+                sprintf('The method "%s" does not exist on object "%s".', $method, self::class)
+            );
+        }
+        $this->{$method}($videoId, $playlistId);
+    }
+
+    /**
      * @param string $videoId
      * @param string $playlistId
      *
      * @throws \Google_Exception
      */
-    private function insertVideoInPlaylist(string $videoId, string $playlistId): void
+    /** @noinspection PhpUnusedPrivateMethodInspection */
+    private function addVideoInPlaylist(string $videoId, string $playlistId): void
     {
         // First, define the resource being added to the playlist by setting its video ID and kind.
         $resourceId = new Google_Service_YouTube_ResourceId();
@@ -266,6 +313,18 @@ final class YouTubePlaylist extends ContentsProcessor implements ProjectRootPath
     }
 
     /**
+     * @param string $videoId
+     * @param string $playlistId
+     *
+     * @throws \Google_Exception
+     */
+    /** @noinspection PhpUnusedPrivateMethodInspection */
+    private function removeVideoInPlaylist(string $videoId, string $playlistId): void
+    {
+        $this->getYouTubeService()->playlistItems->delete($videoId);
+    }
+
+    /**
      * @param Content $content
      *
      * @return string
@@ -281,14 +340,16 @@ final class YouTubePlaylist extends ContentsProcessor implements ProjectRootPath
 
     /**
      * @param \App\Collection\Collection $videoIds
+     * @param string $action
      *
      * @return bool
      */
-    private function shouldUpdatePlaylist(Collection $videoIds): bool
+    private function shouldUpdatePlaylist(Collection $videoIds, string $action): bool
     {
         $this->ui->writeln(
             sprintf(
-                PHP_EOL.'Append videos to the playlist <info>%s</info>...'.PHP_EOL,
+                '%s videos on the playlist <info>%s</info>...'.PHP_EOL,
+                ucfirst($action),
                 sprintf(static::YOUTUBE_PLAYLIST_URL, $this->config['playlist_id'])
             )
         );
@@ -297,8 +358,9 @@ final class YouTubePlaylist extends ContentsProcessor implements ProjectRootPath
             $this->ui,
             $videoIds,
             sprintf(
-                '%sThe script is about to add <question> %s </question> videos to the playlist. '.PHP_EOL,
+                '%sThe script is about to %s <question> %s </question> videos on the playlist. '.PHP_EOL,
                 $this->ui->indent(),
+                $action,
                 $videoIds->count()
             ),
             'add'
