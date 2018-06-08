@@ -188,8 +188,13 @@ class YoutubeDl
         }
 
         $metadataFile = $this->downloadPath.'/'.$m[1];
+        $metadataFileContent = file_get_contents($metadataFile);
 
-        $videoData = $this->jsonDecode(trim(file_get_contents($metadataFile)));
+        if (false === $metadataFileContent) {
+            throw new YoutubeDlException('Download of the metadata file failed.');
+        }
+
+        $videoData = $this->jsonDecode(trim($metadataFileContent));
 
         @unlink($metadataFile);
 
