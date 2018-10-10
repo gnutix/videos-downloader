@@ -24,7 +24,7 @@ abstract class ContentsProcessor
         $this->ui = $ui;
 
         if (!empty($configFilePath = $this->getConfigFilePath())) {
-            $config += (array) Yaml::parseFile($configFilePath);
+            $config = array_replace_recursive((array) Yaml::parseFile($configFilePath), $config);
         }
 
         $this->config = $config;

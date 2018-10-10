@@ -1,8 +1,9 @@
 ---
-# the keys should match those of "youtube_dl.options"
-download_files:
-    audio: mp3
-    video: mp4
+# the keys should match those of "youtube_dl.options", like :
+# download_files:
+#    audio: mp3
+#    video: mp4
+download_files: ~
 
 # the URL of the referer from which the videos are (supposedly) downloaded
 referer: ~
